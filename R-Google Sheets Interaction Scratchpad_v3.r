@@ -117,16 +117,34 @@ library(ReporteRs)
       s6.df <- s6.df[order(s6.df$ans.num),
                      c(which(grepl("ans.full",names(s6.df))),which(!grepl("ans",names(s6.df))))]
 
-  #} # END OF LOOP BY SCHOOL 
+  #} # END OF LOOP I BY SCHOOL 
               
 ### EXPORTING RESULTS TO POWERPOINT ###
-
-  output.dir <- "C:/Users/WNF/Desktop/"
-  setwd(output.dir)
-
+  
+  j <- 1
+  #for(j in 1:length(school.names)){
+  
+  if(j == 1){
+    template.file <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation/2017-18 Results/CWIS_School Report Template.pptx"
+    target.file <- "C:/Users/WNF/Desktop/CWIS Automation Testing/Template.pptx"
+    file.copy(template.file,target.file)
+  }
+  
   #Copy template to new file for editing
-  output.docname.j <- paste("CWIS Report_",gsub(":",".",Sys.time()), sep="") 
-  file.from <- ""
+  target.name.j <- paste( "C:/Users/WNF/Desktop/CWIS Automation Testing/",
+                          "CWIS Report_",school.name.i,
+                          "_",
+                          gsub(":",".",Sys.time()),".pptx", sep="") 
+  
+  file.rename(target.file, target.name.j)
+  
+  
+  
+  
+  
+  file.from.dir <- "C:/Users/WNF/Desktop/"
+  file.to.dir <- "C:/Users/WNF/Desktop/"
+  
   #Edit powerpoint template
   
  
@@ -146,4 +164,5 @@ library(ReporteRs)
  
   gs_edit_cells(dat, ws='sheetname', input=colnames(result), byrow=TRUE, anchor="A1")
   gs_edit_cells(dat, ws='sheetname', input = result, anchor="A2", col_names=FALSE, trim=TRUE)
-
+  
+  } #END OF LOOP J BY SCHOOL
