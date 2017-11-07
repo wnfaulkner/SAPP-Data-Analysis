@@ -18,6 +18,7 @@ library(magrittr)
 library(googlesheets)
 library(dplyr)
 library(ReporteRs)
+library(ggplot2)
 
 ### LOAD DATA ###
 
@@ -47,6 +48,7 @@ library(ReporteRs)
   names(dat.df.1)[names(dat.df.1) == "Q27_1"] <- "district.name"
   names(dat.df.1)[names(dat.df.1) == "Q6"] <- "role"
   names(dat.df.1) <- names(dat.df.1) %>% gsub("_","\\.",.)
+  
   # Exclude responses with 'NA' for school name
   dat.df <- dat.df.1[!is.na(dat.df.1$school.name),]
    
@@ -73,14 +75,20 @@ library(ReporteRs)
   #for(i in l: length(school.names)){   #START OF LOOP BY SCHOOL
    
     # Create data frame for this loop - restrict to responses from school name i
-    school.name.i <- school.names[i]
-    dat.df.i <- dat.df[dat.df$school.name == school.name.i,] %>% tbl_df
+      school.name.i <- school.names[i]
+      dat.df.i <- dat.df[dat.df$school.name == school.name.i,] %>% tbl_df
+      district.name.i <- dat.df.i$district.name %>% unique
     
     #S2 Table for slide 2 "Participation Details"
       s2.mtx <- table(dat.df.i$role) %>% as.matrix
       s2.df <- cbind(row.names(s2.mtx),s2.mtx[,1]) %>% as.data.frame
-      rownames(s2.df) <- c("Role","Num Responses")
-    
+      names(s2.df) <- c("Role","Num Responses")
+      rownames(s2.df) <- c()
+      s2.df$Role <- s2.df$Role %>% as.character #convert factor to character
+      s2.df$`Num Responses` <- s2.df$`Num Responses` %>% as.character %>% as.numeric #convert factor to numeric
+      s2.df <- rbind(s2.df, c("Total", sum(s2.df[,2] %>% as.character %>% as.numeric))) #add "Total" row
+      
+          
     #S3 Table for slide 3 "Overall Scale Performance"
     
   
@@ -122,33 +130,158 @@ library(ReporteRs)
 ### EXPORTING RESULTS TO POWERPOINT ###
   
   j <- 1
-  #for(j in 1:length(school.names)){
+  #for(j in 1:length(school.names)){    #START LOOP J BY SCHOOL
   
-  if(j == 1){
-    template.file <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation/2017-18 Results/CWIS_School Report Template.pptx"
-    target.file <- "C:/Users/WNF/Desktop/CWIS Automation Testing/Template.pptx"
+  #Copy template file into target directory & rename with individual report name 
+    if(j == 1){
+      template.file <- "C:/Users/WNF/Desktop/CWIS Template.pptx"
+      target.file <- "C:/Users/WNF/Desktop/CWIS Automation Testing/Template.pptx"
+    }
+    
     file.copy(template.file,target.file)
-  }
+    target.name.j <- paste( "C:/Users/WNF/Desktop/CWIS Automation Testing/",
+                            "CWIS Report_",school.name.i,
+                            "_",
+                            gsub(":",".",Sys.time()),".pptx", sep="") 
+    file.rename(target.file, target.name.j)
   
-  #Copy template to new file for editing
-  target.name.j <- paste( "C:/Users/WNF/Desktop/CWIS Automation Testing/",
-                          "CWIS Report_",school.name.i,
-                          "_",
-                          gsub(":",".",Sys.time()),".pptx", sep="") 
-  
-  file.rename(target.file, target.name.j)
-  
-  
-  
-  
-  
-  file.from.dir <- "C:/Users/WNF/Desktop/"
-  file.to.dir <- "C:/Users/WNF/Desktop/"
+  #Powerpoint Formatting Setup
+    pptx.j <- pptx(template = target.name.j)
+    
+    options("ReporteRs-fontsize" = 20)
+    options("ReporteRs-default-font" = "Calibri")
+    
+    layouts = slide.layouts(pptx.j)
+    layouts
+    for(k in layouts ){
+      slide.layouts(pptx.j, k )
+      title(sub = k )
+    }
+    
+    #Useful colors
+    titlegreen <- rgb(118,153,48, maxColorValue=255)
+    subtitlegreen <- rgb(131,130,105, maxColorValue=255)
+    purpleshade <- "#d0abd6"
+    purpleheader <- "#3d2242"
+    backgroundgreen <- "#94c132"
+    subtextgreen <- "#929e78"
+    
+    #Text formatting
+      title.format <- textProperties(color = titlegreen, font.size = 54, font.weight = "bold")  
+      subtitle.format <- textProperties(color = subtitlegreen, font.size = 22, font.weight = "bold")
+      section.title.format <- textProperties(color = "white", font.size = 48, font.weight = "bold")
   
   #Edit powerpoint template
-  
- 
 
+    ## SLIDE 1 ##
+      pptx.j <- addSlide( pptx.j, slide.layout = 'Title Slide', bookmark = 1)
+      
+      #Text itself - as "piece of text" (pot) objects
+        title.j <- pot(
+                        "Collaborative Work Implementation Survey",
+                        title.format
+                      )
+        subtitle.j <- pot(
+                        paste("School Report: ",school.name.i),
+                        subtitle.format
+                      )
+      
+        districttitle.j <- pot(
+                              paste("District: ",district.name.i),
+                              subtitle.format
+                            )
+      
+      #Write Text into Slide
+        pptx.j <- addParagraph(pptx.j, 
+                               title.j, 
+                               height = 1.92,
+                               width = 7.76,
+                               offx = 1.27,
+                               offy = 2.78,
+                               par.properties=parProperties(text.align="left", padding=0)
+                                )
+        pptx.j <- addParagraph(pptx.j, 
+                               subtitle.j, 
+                               height = 0.67,
+                               width = 7.76,
+                               offx = 1.27,
+                               offy = 4.7,
+                               par.properties=parProperties(text.align="left", padding=0)
+                               )
+      
+        pptx.j <- addParagraph(pptx.j, 
+                               districttitle.j, 
+                               height = 0.67,
+                               width = 7.76,
+                               offx = 1.27,
+                               offy = 5.35,
+                               par.properties=parProperties(text.align="left", padding=0)
+                               )
+      #writeDoc(pptx.j, file = target.name.j) #test Slide 1 build
+      
+      
+    ## SLIDE 2 ##
+      pptx.j <- addSlide( pptx.j, slide.layout = 'S2') 
+      
+      #S2 Title
+        s2.title <- pot("Participation Details",title.format)
+        pptx.j <- addParagraph(pptx.j, 
+                               s2.title, 
+                               height = 0.89,
+                               width = 8.47,
+                               offx = 0.83,
+                               offy = 0.85,
+                               par.properties=parProperties(text.align="left", padding=0)
+                              )
+      
+      #S2 Table
+        s2.ft <- FlexTable(
+            data = s2.df,
+            header.columns = TRUE,
+            add.rownames = FALSE,
+            
+            header.cell.props = cellProperties(background.color = purpleheader),
+            header.text.props = textProperties(color = "white", font.size = 22, font.weight = "bold"),
+            
+            body.cell.props = cellProperties(background.color = "white")
+          )
+      
+        s2.ft <- setFlexTableWidths(s2.ft, widths = c(3.25, 3.25))      
+        s2.ft <- setZebraStyle(s2.ft, odd = purpleshade, even = "white" ) 
+        
+        pptx.j <- addFlexTable(pptx.j, 
+                               s2.ft, 
+                               height = 4.01,
+                               width = 6.71,
+                               offx = 1.65,
+                               offy = 2.75,
+                               par.properties=parProperties(text.align="left", padding=0)
+                              )
+      
+      #writeDoc(pptx.j, file = target.name.j) #test Slide 2 build
+      
+    ## SLIDE 5 ##
+      pptx.j <- addSlide( pptx.j, slide.layout = 'Section Header')
+      
+      #S5 Title
+        s5.title <- pot("Diving Deeper Into Scales: EFFECTIVE TEACHING AND LEARNING PRACTICES",
+                        section.title.format)
+        pptx.j <- addParagraph(pptx.j, 
+                               s5.title, 
+                               height = 2.63,
+                               width = 7.76,
+                               offx = 1.25,
+                               offy = 2.48,
+                               par.properties=parProperties(text.align="left", padding=0)
+                               )
+      writeDoc(pptx.j, file = target.name.j)
+    
+    #Slide 6
+    
+    
+    
+    
+ 
 
 
 
