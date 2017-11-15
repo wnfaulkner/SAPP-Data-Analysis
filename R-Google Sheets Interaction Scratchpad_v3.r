@@ -22,9 +22,6 @@ library(ggplot2)
 
 ### LOAD DATA ###
 
-#trigger.ss <- 	gs_key("1ONbbzVy5N0yNj-41LrGiWo3Y5na9AmUdaCnfbLORMao",verbose = TRUE) 
-#trigger.df <- 	gs_read(trigger.ss, ws = "Form Responses 1", range = NULL, literal = TRUE) %>% as.data.frame()
-
   # School & district name selections
   school.names <- "North Middle School" #!
 
@@ -35,22 +32,74 @@ library(ggplot2)
 ### DATA CLEANING & PREP ###
 
   # Remove trailing column and rows with extra labels
-  dat.startrow <- which(cwis.df[,1] %>% substr(.,1,1) == "{")+1
-  dat.remove.colnums <- which(cwis.df %>% names %>% substr(.,1,1) == "X")+1
+    dat.startrow <- which(cwis.df[,1] %>% substr(.,1,1) == "{")+1
+    dat.remove.colnums <- which(cwis.df %>% names %>% substr(.,1,1) == "X")+1
+    
+    dat.df.1 <- cwis.df[dat.startrow:length(cwis.df[,1]),                          # all rows after row where first cell begins with "{"
+                      setdiff(1:length(names(cwis.df)),dat.remove.colnums)]        # all columns except those whose names begin with "X"
+    
+    names(dat.df.1) <- names(cwis.df)[1:dim(dat.df.1)[2]]
   
-  dat.df.1 <- cwis.df[dat.startrow:length(cwis.df[,1]),                            # all rows after row where first cell begins with "{"
-                    setdiff(1:length(names(cwis.df)),dat.remove.colnums)]        # all columns except those whose names begin with "X"
-  
-  names(dat.df.1) <- names(cwis.df)[1:dim(dat.df.1)[2]]
-
   # Variable renaming for useful variables
-  names(dat.df.1)[names(dat.df.1) == "Q27_2"] <- "school.name"
-  names(dat.df.1)[names(dat.df.1) == "Q27_1"] <- "district.name"
-  names(dat.df.1)[names(dat.df.1) == "Q6"] <- "role"
-  names(dat.df.1) <- names(dat.df.1) %>% gsub("_","\\.",.)
-  
+    names(dat.df.1)[names(dat.df.1) == "Q27_2"] <- "school.name"
+    names(dat.df.1)[names(dat.df.1) == "Q27_1"] <- "district.name"
+    names(dat.df.1)[names(dat.df.1) == "Q6"] <- "role"
+    #names(dat.df.1) <- names(dat.df.1) %>% gsub("_","\\.",.)
+
+  # Re-stack & collapse columns that are split up because of survey branching 
+    split.names.ls <- strsplit(names(dat.df.1),"_")
+    #split.names.elements.v <- split.names.ls %>% .[sapply(., length)==1] %>% which %>% unlist
+    
+    base.varnames.v <-  split.names.ls %>% .[sapply(., length)==1] %>% unlist
+    
+    ans.opt.varnames.v <- split.names.ls %>% 
+                            .[sapply(., length)==2] %>% 
+                              sapply(., function(x){paste(x, collapse = "_")}) 
+    
+    branch.ans.opt.varnames.v <- split.names.ls %>% 
+                                 .[sapply(., length)==3] %>% 
+                                    sapply(., function(x){paste(x, collapse = "_")})   
+    branch.q.names.v <- strsplit(branch.ans.opt.varnames.v, "_") %>% unlist %>% .[grep("Q",.)] %>% unique 
+    
+    q.ls <- list()
+    
+    #h <- 4 #for testing loop
+    
+    for(h in 1:length(branch.q.names.v)){     ### START OF LOOP BY QUESTION; only for questions with branched variables
+      q.name.h <- branch.q.names.v[h]
+      varnames.h <- names(dat.df.1)[grep(q.name.h, names(dat.df.1))]
+     
+        q.ans.options <- paste(varnames.h %>% strsplit(.,"_") %>% lapply(., `[[`, 2) %>% unique %>% unlist,
+                                varnames.h %>% strsplit(.,"_") %>% lapply(., `[[`, 3) %>% unique %>% unlist,
+                                    sep = "_")
+        
+        collapsed.h.ls <- list()
+        
+        for(g in 1:length(q.ans.options)){    ### START OF LOOP BY ANSWER OPTION
+
+          check.varnames.h <- str_sub(names(dat.df.1), start = -nchar(q.ans.options[g]))
+          uncollapsed.df <- grep(q.ans.options[g],check.varnames.h) %>% c(8,.) %>% dat.df.1[,.]
+          uncollapsed.ls <- apply(uncollapsed.df,1, function(x) x[!is.na(x)]) 
+          collapsed.df <- do.call(rbind, lapply(uncollapsed.ls, `[`, 1:max(sapply(uncollapsed.ls, length)))) %>% as.data.frame
+          collapsed.df[,1] <- collapsed.df[,1] %>% as.character
+          collapsed.df[,2] <- collapsed.df[,2] %>% as.character
+          names(collapsed.df) <- c("ResponseId",q.ans.options[g])        
+          collapsed.h.ls[[g]] <- collapsed.df
+        
+        } ### END OF LOOP BY ANSWER OPTION
+      
+        q.dat.df <- collapsed.h.ls %>% Reduce(function(x, y) full_join(x,y, all = TRUE), .)
+        q.ls[[h + 2]] <- q.dat.df
+   
+      } ### END OF LOOP BY QUESTION
+      
+    #Re-merge with non-branched variables
+    q.ls[[1]] <- dat.df.1[names(dat.df.1) %in% base.varnames.v]
+    q.ls[[2]] <- dat.df.1[names(dat.df.1) %in% c("ResponseId",ans.opt.varnames.v)]
+    dat.df.2 <- q.ls %>% Reduce(function(x, y) full_join(x,y, all = TRUE), .) 
+
   # Exclude responses with 'NA' for school name
-  dat.df <- dat.df.1[!is.na(dat.df.1$school.name),]
+    dat.df <- dat.df.2[!is.na(dat.df.2$school.name),]
    
   # Lookup Tables
   
@@ -157,6 +206,9 @@ library(ggplot2)
     file.copy(template.file, target.file.j)
   
     
+    
+    
+    
   #Powerpoint Formatting Setup
     pptx.j <- pptx(template = target.file.j)
     
@@ -184,6 +236,7 @@ library(ggplot2)
       subtitle.format <- textProperties(color = notesgrey, font.size = 22, font.weight = "bold")
       section.title.format <- textProperties(color = "white", font.size = 48, font.weight = "bold")
       notes.format <- textProperties(color = notesgrey, font.size = 14)
+
   
   #Edit powerpoint template
 
@@ -233,11 +286,10 @@ library(ggplot2)
                                )
       #writeDoc(pptx.j, file = target.file.j) #test Slide 1 build
       
-      
     ## SLIDE 2 ##
-      pptx.j <- addSlide( pptx.j, slide.layout = 'S2') 
-      
-      #Title
+      pptx.j <- addSlide( pptx.j, slide.layout = 'Title Slide')
+  
+     #Title
         s2.title <- pot("Participation Details",title.format)
         pptx.j <- addParagraph(pptx.j, 
                                s2.title, 
@@ -272,7 +324,7 @@ library(ggplot2)
                                par.properties=parProperties(text.align="left", padding=0)
                               )
       
-      #writeDoc(pptx.j, file = target.file.j) #test Slide 2 build
+      writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     
         
     ## SLIDE 3 ##
@@ -293,7 +345,7 @@ library(ggplot2)
       #Viz
       
       #Notes
-      s3.notes <- pot("Note: A score of 4 represents a response of "most of the time" for Effective Teaching and Learning Practices, Common Formative Assessment, and Data-based Decision-making scales, and "agree" for the Leadership, and Professional Development scale.",
+      s3.notes <- pot("Note: A score of 4 represents a response of 'most of the time' for Effective Teaching and Learning Practices, Common Formative Assessment, and Data-based Decision-making scales, and 'agree' for the Leadership, and Professional Development scale.",
                       notes.format)
       pptx.j <- addParagraph(pptx.j,
                              s3.notes,
@@ -304,6 +356,7 @@ library(ggplot2)
                              par.properties = parProperties(text.align ="left", padding = 0)
       )
       
+      writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
       
     ## SLIDE 4 ##
       
@@ -323,8 +376,8 @@ library(ggplot2)
       #Viz
       
       #Notes
-      s4.notes <- pot("A score of 3 represents a response of "about half the time" for Effective Teaching and Learning, Common Formative Assessment, and Data-based Decision-making scales, while a 2 represents "sometimes". 
-                      A 3 corresponds to "neither agree or disagree" for the Leadership, and Professional Development scale while a 2 represents "disagree."",
+      s4.notes <- pot("A score of 3 represents a response of 'about half the time' for Effective Teaching and Learning, Common Formative Assessment, and Data-based Decision-making scales, while a 2 represents 'sometimes'. 
+                      A 3 corresponds to 'neither agree or disagree' for the Leadership, and Professional Development scale while a 2 represents 'disagree.'",
                       notes.format)
       pptx.j <- addParagraph(pptx.j,
                              s4.notes,
@@ -335,7 +388,8 @@ library(ggplot2)
                              par.properties = parProperties(text.align ="left", padding = 0)
       )
       
-
+      writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
+      
     ## SLIDE 5 ##
       pptx.j <- addSlide( pptx.j, slide.layout = 'Section Header')
       
@@ -350,7 +404,7 @@ library(ggplot2)
                                offy = 2.48,
                                par.properties=parProperties(text.align="left", padding=0)
                                )
-      writeDoc(pptx.j, file = target.file.j)
+      writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     
     ## Slide 6 ##
     
@@ -362,8 +416,8 @@ library(ggplot2)
                              s6.title, 
                              height = 0.89,
                              width = 8.47,
-                             offx = 0.83,
-                             offy = 0.85,
+                             offx = 0,
+                             offy = 0,
                              par.properties=parProperties(text.align="left", padding=0)
       )
       
@@ -403,19 +457,49 @@ library(ggplot2)
                       6. (students state criteria) Students in my classroom state the success criteria for achieving their learning target.
                       7. (instruction state standards) The instruction of teachers in my building intentionally addresses the state standards for my grade/subject.
                       8. (student reviews cfa) Each student reviews his/her results of common formative assessments with a teacher.",
-                      notes.format)
+                      textProperties(color = notesgrey, font.size = 10))
+      
       pptx.j <- addParagraph(pptx.j,
                              s6.notes,
                              height = 3.37,
                              width = 9.57,
                              offx = 0.22,
-                             offy = 3.25,
+                             offy = 4.25,
                              par.properties = parProperties(text.align ="left", padding = 0)
       )
       
+      writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     
-    
- 
+    ## SLIDE 7 ##
+      
+      pptx.j <- addSlide( pptx.j, slide.layout = 'S2')
+      
+      #Title
+      s3.title <- pot("Overall Scale Performance",title.format)
+      pptx.j <- addParagraph(pptx.j, 
+                             s3.title, 
+                             height = 0.89,
+                             width = 8.47,
+                             offx = 0.83,
+                             offy = 0.85,
+                             par.properties=parProperties(text.align="left", padding=0)
+      )
+      
+      #Viz
+      
+      #Notes
+      s3.notes <- pot("Note: A score of 4 represents a response of 'most of the time' for Effective Teaching and Learning Practices, Common Formative Assessment, and Data-based Decision-making scales, and 'agree' for the Leadership, and Professional Development scale.",
+                      notes.format)
+      pptx.j <- addParagraph(pptx.j,
+                             s3.notes,
+                             height = 1.39,
+                             width = 8.47,
+                             offx = 0.83,
+                             offy = 5.28,
+                             par.properties = parProperties(text.align ="left", padding = 0)
+      )
+      
+      writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
 
 
 
