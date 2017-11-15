@@ -19,6 +19,7 @@ library(googlesheets)
 library(dplyr)
 library(ReporteRs)
 library(ggplot2)
+library(stringr)
 
 ### LOAD DATA ###
 
@@ -40,12 +41,6 @@ library(ggplot2)
     
     names(dat.df.1) <- names(cwis.df)[1:dim(dat.df.1)[2]]
   
-  # Variable renaming for useful variables
-    names(dat.df.1)[names(dat.df.1) == "Q27_2"] <- "school.name"
-    names(dat.df.1)[names(dat.df.1) == "Q27_1"] <- "district.name"
-    names(dat.df.1)[names(dat.df.1) == "Q6"] <- "role"
-    #names(dat.df.1) <- names(dat.df.1) %>% gsub("_","\\.",.)
-
   # Re-stack & collapse columns that are split up because of survey branching 
     split.names.ls <- strsplit(names(dat.df.1),"_")
     #split.names.elements.v <- split.names.ls %>% .[sapply(., length)==1] %>% which %>% unlist
@@ -59,31 +54,36 @@ library(ggplot2)
     branch.ans.opt.varnames.v <- split.names.ls %>% 
                                  .[sapply(., length)==3] %>% 
                                     sapply(., function(x){paste(x, collapse = "_")})   
-    branch.q.names.v <- strsplit(branch.ans.opt.varnames.v, "_") %>% unlist %>% .[grep("Q",.)] %>% unique 
+    branch.q.names.v <- strsplit(branch.ans.opt.varnames.v, "_") %>% 
+                                  unlist %>% 
+                                    .[grep("Q",.)] %>% 
+                                      unique 
     
     q.ls <- list()
-    
+    varname.match.ls <- list()
     #h <- 4 #for testing loop
     
     for(h in 1:length(branch.q.names.v)){     ### START OF LOOP BY QUESTION; only for questions with branched variables
+      
       q.name.h <- branch.q.names.v[h]
       varnames.h <- names(dat.df.1)[grep(q.name.h, names(dat.df.1))]
      
-        q.ans.options <- paste(varnames.h %>% strsplit(.,"_") %>% lapply(., `[[`, 2) %>% unique %>% unlist,
+        q.ans.options.h <- paste(varnames.h %>% strsplit(.,"_") %>% lapply(., `[[`, 2) %>% unique %>% unlist,
                                 varnames.h %>% strsplit(.,"_") %>% lapply(., `[[`, 3) %>% unique %>% unlist,
                                     sep = "_")
+        varname.match.ls[[h]] <- q.ans.options.h
         
         collapsed.h.ls <- list()
         
-        for(g in 1:length(q.ans.options)){    ### START OF LOOP BY ANSWER OPTION
+        for(g in 1:length(q.ans.options.h)){    ### START OF LOOP BY ANSWER OPTION
 
-          check.varnames.h <- str_sub(names(dat.df.1), start = -nchar(q.ans.options[g]))
-          uncollapsed.df <- grep(q.ans.options[g],check.varnames.h) %>% c(8,.) %>% dat.df.1[,.]
+          check.varnames.h <- str_sub(names(dat.df.1), start = -nchar(q.ans.options.h[g]))
+          uncollapsed.df <- grep(q.ans.options.h[g],check.varnames.h) %>% c(8,.) %>% dat.df.1[,.]
           uncollapsed.ls <- apply(uncollapsed.df,1, function(x) x[!is.na(x)]) 
           collapsed.df <- do.call(rbind, lapply(uncollapsed.ls, `[`, 1:max(sapply(uncollapsed.ls, length)))) %>% as.data.frame
           collapsed.df[,1] <- collapsed.df[,1] %>% as.character
           collapsed.df[,2] <- collapsed.df[,2] %>% as.character
-          names(collapsed.df) <- c("ResponseId",q.ans.options[g])        
+          names(collapsed.df) <- c("ResponseId",q.ans.options.h[g])        
           collapsed.h.ls[[g]] <- collapsed.df
         
         } ### END OF LOOP BY ANSWER OPTION
@@ -94,31 +94,69 @@ library(ggplot2)
       } ### END OF LOOP BY QUESTION
       
     #Re-merge with non-branched variables
-    q.ls[[1]] <- dat.df.1[names(dat.df.1) %in% base.varnames.v]
-    q.ls[[2]] <- dat.df.1[names(dat.df.1) %in% c("ResponseId",ans.opt.varnames.v)]
-    dat.df.2 <- q.ls %>% Reduce(function(x, y) full_join(x,y, all = TRUE), .) 
+      q.ls[[1]] <- dat.df.1[names(dat.df.1) %in% base.varnames.v]
+      q.ls[[2]] <- dat.df.1[names(dat.df.1) %in% c("ResponseId",ans.opt.varnames.v)]
+      dat.df.2 <- q.ls %>% Reduce(function(x, y) full_join(x,y, all = TRUE), .) 
 
-  # Exclude responses with 'NA' for school name
-    dat.df <- dat.df.2[!is.na(dat.df.2$school.name),]
    
   # Lookup Tables
   
-    #Variable names & questions
-    vars.df <- cbind(names(cwis.df),cwis.df[1,] %>% t) %>% as.data.frame
-    names(vars.df) <- c("var","question.full")
-    
+    #Variable names & questions, adjusting for collapsed columns
+      vars.df <- names(dat.df.2) %>% as.data.frame(., stringsAsFactors = FALSE)
+      names(vars.df) <- "question.id"
+      vars.df$question.full <- ""
+      q.ans.options.v <- varname.match.ls %>% do.call(c, .)
+      varmatch.df <- paste("1_", q.ans.options.v, sep = "") %>% cbind(q.ans.options.v, .) %>% as.data.frame
+      
+      #f=25
+      for(f in 1:dim(vars.df)[1]){
+        question.id.f <- vars.df$question.id[f]
+        
+        if(question.id.f %in% varmatch.df$q.ans.options.v){
+          match.id.f <- varmatch.df$.[varmatch.df$q.ans.options.v == question.id.f] %>% as.character
+        }else{
+          match.id.f <- question.id.f
+        }
+        
+        vars.df$question.full[f] <- cwis.df[1,] %>% .[names(cwis.df)==match.id.f] %>% as.character
+      }
+      
+      #Remove repeated parts of questions
+      question.full.remove.strings <- c(
+        "Please ",
+        "Please use the agreement scale to respond to each prompt representing your",
+        "Please use the frequency scale to respond to each prompt representing your",
+        " - Classroom Teacher - ",
+        "\\[Field-2\\]",
+        "\\[Field-3\\]"
+      )
+      vars.df$question.full <- gsub(paste(question.full.remove.strings, collapse = "|"),
+                                    "",
+                                    vars.df$question.full)
+      
     #Answer Options
-    ans.opt.always.df <-  cbind(
-                            c(1:5),
-                            c("Always","Most of the time","About half the time","Sometimes","Never")
-                          ) %>% as.data.frame
-    names(ans.opt.always.df) <- c("ans.num","ans.text")
-    ans.opt.always.df$ans.full <- paste(ans.opt.always.df$ans.num, ans.opt.always.df$ans.text, sep = ". ")
-    ans.opt.always.df[,1] <- ans.opt.always.df[,1] %>% as.character %>% as.numeric
-    ans.opt.always.df[,2] <- ans.opt.always.df[,2] %>% as.character
-    ans.opt.always.df[,3] <- ans.opt.always.df[,3] %>% as.character
-    
-    slide.names.v <- c("Participation Details")
+      ans.opt.always.df <-  cbind(
+                              c(1:5),
+                              c("Always","Most of the time","About half the time","Sometimes","Never")
+                            ) %>% as.data.frame
+      names(ans.opt.always.df) <- c("ans.num","ans.text")
+      ans.opt.always.df$ans.full <- paste(ans.opt.always.df$ans.num, ans.opt.always.df$ans.text, sep = ". ")
+      ans.opt.always.df[,1] <- ans.opt.always.df[,1] %>% as.character %>% as.numeric
+      ans.opt.always.df[,2] <- ans.opt.always.df[,2] %>% as.character
+      ans.opt.always.df[,3] <- ans.opt.always.df[,3] %>% as.character
+      
+      slide.names.v <- c("Participation Details")
+      
+      
+  # Variable renaming for useful variables
+    names(dat.df.2)[names(dat.df.2) == "Q27_2"] <- "school.name"
+    names(dat.df.2)[names(dat.df.2) == "Q27_1"] <- "district.name"
+    names(dat.df.2)[names(dat.df.2) == "Q6"] <- "role"
+    #names(dat.df.1) <- names(dat.df.1) %>% gsub("_","\\.",.)
+      
+  # Exclude responses with 'NA' for school name
+    dat.df <- dat.df.2[!is.na(dat.df.2$school.name),] # removes 481 rows in test data
+      
   
 ### PRODUCING DATA, TABLES, & CHARTS ###
 
@@ -144,7 +182,7 @@ library(ggplot2)
     #S3 Table for slide 3 "Overall Scale Performance"
     
       #Define variables to average for each 
-      etl.vars <- 
+      #etl.vars <- 
   
     #S6 Table for slide 6 "ETLP Scale Performance"
       s6.headers.v <- paste(c(1:8),
