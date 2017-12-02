@@ -29,6 +29,9 @@ library(stringr)
   # Main data
   cwis.ss <- 	gs_key("1ONbbzVy5N0yNj-41LrGiWo3Y5na9AmUdaCnfbLORMao",verbose = TRUE)
   cwis.df <- 	gs_read(cwis.ss, ws = 1, range = NULL, literal = TRUE) %>% as.data.frame()
+  
+  # Variable helper table
+  embed.names.df <- 	gs_read(cwis.ss, ws = 2, range = NULL, literal = TRUE) %>% as.data.frame()
 
 ### DATA CLEANING & PREP ###
 
@@ -108,7 +111,7 @@ library(stringr)
       q.ans.options.v <- varname.match.ls %>% do.call(c, .)
       varmatch.df <- paste("1_", q.ans.options.v, sep = "") %>% cbind(q.ans.options.v, .) %>% as.data.frame
       
-      #f=25
+      #f=25 #LOOP TESTER
       for(f in 1:dim(vars.df)[1]){
         question.id.f <- vars.df$question.id[f]
         
@@ -134,6 +137,11 @@ library(stringr)
                                     "",
                                     vars.df$question.full)
       
+      #Add variable names from embedding tool 
+      embed.names.df$embed.var.id <- toupper(embed.names.df$embed.var.id)
+      vars.df <-  left_join(vars.df, embed.names.df[,2:3], by = c("question.id" = "embed.var.id"))
+      
+      
     #Answer Options
       ans.opt.always.df <-  cbind(
                               c(1:5),
@@ -154,9 +162,12 @@ library(stringr)
     names(dat.df.2)[names(dat.df.2) == "Q6"] <- "role"
     #names(dat.df.1) <- names(dat.df.1) %>% gsub("_","\\.",.)
       
+  # Add numeric variables for ordinal scales
+    dat.df.3 <- left_join(dat.df.2, ans.opt.always.df, by = c("" = ""))
+
   # Exclude responses with 'NA' for school name
-    dat.df <- dat.df.2[!is.na(dat.df.2$school.name),] # removes 481 rows in test data
-      
+    ord.vars <- 
+    dat.df <- dat.df.2[!is.na(dat.df.2$school.name),] # removes 481 rows in test data      
   
 ### PRODUCING DATA, TABLES, & CHARTS ###
 
@@ -181,7 +192,8 @@ library(stringr)
           
     #S3 Table for slide 3 "Overall Scale Performance"
     
-      #Define variables to average for each 
+      #Define variables to average for each column
+      
       #etl.vars <- 
   
     #S6 Table for slide 6 "ETLP Scale Performance"
@@ -196,7 +208,7 @@ library(stringr)
                             "student reviews cfa"),sep = ". "
                           )
       
-      s6.varnames.v <- names(dat.df.i)[substr(names(dat.df.i),1,5)=="2.Q4."][c(1:7,10)]
+      s6.varnames.v <- names(dat.df.i)[substr(names(dat.df.i),1,2)=="Q4"][c(1:7,10)]
       
       dat.df.i.s6 <- dat.df.i[,names(dat.df.i) %in% s6.varnames.v]
       
