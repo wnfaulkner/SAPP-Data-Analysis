@@ -303,6 +303,8 @@ library(stringr)
     #Useful colors
     titlegreen <- rgb(118,153,48, maxColorValue=255)
     notesgrey <- rgb(131,130,105, maxColorValue=255)
+    graphlabelsgrey <- "#5a6b63"
+    graphgridlinesgrey <- "#e6e6e6"
     purpleshade <- "#d0abd6"
     purpleheader <- "#3d2242"
     purplegraphshade <- "#402339"
@@ -411,52 +413,74 @@ library(stringr)
       pptx.j <- addSlide( pptx.j, slide.layout = 'S2')
       
       #Title
-      s3.title <- pot("Overall Scale Performance",title.format)
-      pptx.j <- addParagraph(pptx.j, 
-                             s3.title, 
-                             height = 0.89,
-                             width = 8.47,
-                             offx = 0.83,
-                             offy = 0.85,
-                             par.properties=parProperties(text.align="left", padding=0)
-      )
+        s3.title <- pot("Overall Scale Performance",title.format)
+        pptx.j <- addParagraph(pptx.j, 
+                               s3.title, 
+                               height = 0.89,
+                               width = 8.47,
+                               offx = 0.83,
+                               offy = 0.85,
+                               par.properties=parProperties(text.align="left", padding=0)
+        )
       
       #Viz
-      s3.graph <- ggplot(data = s3.outputs.df, aes(x = category, y = school_avg)) + 
-                  geom_bar(stat="identity", fill = purplegraphshade, width = 0.8) + 
-                  ylim(0,5) +
-                  labs(x = "", y = "") +
-                  scale_x_discrete(labels = c("Effective Teaching and Learning","Common Formative Assessment","Data-based Decision-making")) +
-                  geom_text(aes(
-                              y = 0.4, 
-                              label = s3.outputs.df$school_avg,
-                              ), 
-                            size = 4,
-                            color = "white") + 
-                  theme(panel.background = element_blank(),
-                        panel.grid.major.y = element_blank(),
-                        panel.grid.major.x = element_line(color = "#e6e6e6"),
-                        axis.text.x = element_text(size = 10)
-                        ) +     
-                  coord_flip() 
-      #s3.graph
-      
-      pptx.j <- addPlot(pptx.j,
-                        fun = print,
-                        x = s3.graph)
-      
+        s3.graph <- ggplot(data = s3.outputs.df, aes(x = category)) + 
+                    geom_bar(
+                        aes(y = school_avg), 
+                        stat="identity", 
+                        fill = purplegraphshade, 
+                        width = 0.8) + 
+                    geom_errorbar(
+                        mapping = aes(ymin = state_avg-.015, ymax = state_avg-.015), 
+                        color = "black", 
+                        width = 0.9,
+                        size = 1.2,
+                        alpha = 0.2) +
+                    geom_errorbar(
+                        mapping = aes(ymin = state_avg, ymax = state_avg), 
+                        color = "#fae029", 
+                        width = 0.9,
+                        size = 1.2) +
+                    ylim(0,5) +
+                    labs(x = "", y = "") +
+                    scale_x_discrete(labels = c("Effective Teaching and Learning","Common Formative Assessment","Data-based Decision-making")) +
+                    geom_text(aes(
+                                y = 0.4, 
+                                label = s3.outputs.df$school_avg,
+                                ), 
+                              size = 4,
+                              color = "white") + 
+                    theme(panel.background = element_blank(),
+                          panel.grid.major.y = element_blank(),
+                          panel.grid.major.x = element_line(color = graphgridlinesgrey),
+                          axis.text.x = element_text(size = 15),
+                          axis.text.y = element_text(size = 15, color = graphlabelsgrey)
+                          ) +     
+                    coord_flip() 
+        
+        
+        
+        pptx.j <- addPlot(pptx.j,
+                          fun = print,
+                          x = s3.graph,
+                          height = 2.85,
+                          width = 6.39,
+                          offx = 1.8,
+                          offy = 2.16)
+        
       #Notes
-      s3.notes <- pot("Note: A score of 4 represents a response of 'most of the time' for Effective Teaching and Learning Practices, Common Formative Assessment, and Data-based Decision-making scales, and 'agree' for the Leadership, and Professional Development scale.",
-                      notes.format)
-      pptx.j <- addParagraph(pptx.j,
-                             s3.notes,
-                             height = 1.39,
-                             width = 8.47,
-                             offx = 0.83,
-                             offy = 5.28,
-                             par.properties = parProperties(text.align ="left", padding = 0)
-      )
-      
+        s3.notes <- pot("Notes: (a) A score of 4 represents a response of 'most of the time' for Effective Teaching and Learning Practices, Common Formative Assessment, and Data-based Decision-making scales, and 'agree' for the Leadership, and Professional Development scale. (b) The 2016-17 state average is marked with the yellow bar.",
+                        notes.format)
+        
+        pptx.j <- addParagraph(pptx.j,
+                               s3.notes,
+                               height = 1.39,
+                               width = 8.47,
+                               offx = 0.83,
+                               offy = 5.28,
+                               par.properties = parProperties(text.align ="left", padding = 0)
+        )
+        
       writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
       
     ## SLIDE 4 ##
@@ -464,31 +488,31 @@ library(stringr)
       pptx.j <- addSlide( pptx.j, slide.layout = 'S2')
       
       #Title
-      s4.title <- pot("Individual Response Plot",title.format)
-      pptx.j <- addParagraph(pptx.j, 
-                             s4.title, 
-                             height = 0.89,
-                             width = 8.47,
-                             offx = 0.83,
-                             offy = 0.85,
-                             par.properties=parProperties(text.align="left", padding=0)
-      )
+        s4.title <- pot("Individual Response Plot",title.format)
+        pptx.j <- addParagraph(pptx.j, 
+                               s4.title, 
+                               height = 0.89,
+                               width = 8.47,
+                               offx = 0.83,
+                               offy = 0.85,
+                               par.properties=parProperties(text.align="left", padding=0)
+        )
       
       #Viz
       
       #Notes
-      s4.notes <- pot("A score of 3 represents a response of 'about half the time' for Effective Teaching and Learning, Common Formative Assessment, and Data-based Decision-making scales, while a 2 represents 'sometimes'. 
-                      A 3 corresponds to 'neither agree or disagree' for the Leadership, and Professional Development scale while a 2 represents 'disagree.'",
-                      notes.format)
-      pptx.j <- addParagraph(pptx.j,
-                             s4.notes,
-                             height = 1.39,
-                             width = 8.47,
-                             offx = 0.83,
-                             offy = 5.28,
-                             par.properties = parProperties(text.align ="left", padding = 0)
-      )
-      
+        s4.notes <- pot("A score of 3 represents a response of 'about half the time' for Effective Teaching and Learning, Common Formative Assessment, and Data-based Decision-making scales, while a 2 represents 'sometimes'. 
+                        A 3 corresponds to 'neither agree or disagree' for the Leadership, and Professional Development scale while a 2 represents 'disagree.'",
+                        notes.format)
+        pptx.j <- addParagraph(pptx.j,
+                               s4.notes,
+                               height = 1.39,
+                               width = 8.47,
+                               offx = 0.83,
+                               offy = 5.28,
+                               par.properties = parProperties(text.align ="left", padding = 0)
+        )
+        
       writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
       
     ## SLIDE 5 ##
@@ -512,63 +536,62 @@ library(stringr)
       pptx.j <- addSlide( pptx.j, slide.layout = 'S2')
       
       #Title
-      s6.title <- pot("ETLP Scale Performance",title.format)
-      pptx.j <- addParagraph(pptx.j, 
-                             s6.title, 
-                             height = 0.89,
-                             width = 8.47,
-                             offx = 0,
-                             offy = 0,
-                             par.properties=parProperties(text.align="left", padding=0)
-      )
+        s6.title <- pot("ETLP Scale Performance",title.format)
+        pptx.j <- addParagraph(pptx.j, 
+                               s6.title, 
+                               height = 0.89,
+                               width = 8.47,
+                               offx = 0,
+                               offy = 0,
+                               par.properties=parProperties(text.align="left", padding=0)
+        )
       
       #Viz
-      s6.ft <- FlexTable(
-        data = s6.df,
-        header.columns = TRUE,
-        add.rownames = FALSE,
+        s6.ft <- FlexTable(
+          data = s6.df,
+          header.columns = TRUE,
+          add.rownames = FALSE,
+          
+          header.cell.props = cellProperties(background.color = purpleheader),
+          header.text.props = textProperties(color = "white", font.size = 14, font.weight = "bold"),
+          
+          body.cell.props = cellProperties(background.color = "white"), 
+          body.text.props = textProperties(font.size = 12, font.weight = "bold")
+        )
         
-        header.cell.props = cellProperties(background.color = purpleheader),
-        header.text.props = textProperties(color = "white", font.size = 14, font.weight = "bold"),
+        s6.ft <- setFlexTableWidths(s6.ft, widths = c(1, rep(0.8,ncol(s6.df)-1)))      
+        s6.ft <- setZebraStyle(s6.ft, odd = purpleshade, even = "white" ) 
         
-        body.cell.props = cellProperties(background.color = "white"), 
-        body.text.props = textProperties(font.size = 12, font.weight = "bold")
-      )
-      
-      s6.ft <- setFlexTableWidths(s6.ft, widths = c(1, rep(0.8,ncol(s6.df)-1)))      
-      s6.ft <- setZebraStyle(s6.ft, odd = purpleshade, even = "white" ) 
-      
-      pptx.j <- addFlexTable(pptx.j, 
-                             s6.ft, 
-                             height = 1.72,
-                             width = 7.77,
-                             offx = 1.1,
-                             offy = 1.29,
-                             par.properties=parProperties(text.align="left", padding=0)
-      )
-      
+        pptx.j <- addFlexTable(pptx.j, 
+                               s6.ft, 
+                               height = 1.72,
+                               width = 7.77,
+                               offx = 1.1,
+                               offy = 1.29,
+                               par.properties=parProperties(text.align="left", padding=0)
+        )
       
       #Notes
-      s6.notes <- pot("Prompt Text:
-                      1. (learning targets) The students in my classroom, including students with disabilities, write/state learning targets using 'I can' or 'I know' statements.
-                      2. (students assess) The students in my classroom, including students with disabilities, assess their progress by using evidence of student work (rubrics or portfolios).
-                      3. (students identify) The students in my classroom, including students with disabilities, identify what they should do next in their learning based on self-assessment of their progress.
-                      4. (feedback to targets) Students in my classroom, including students with disabilities, receive feedback on their progress toward their learning targets.
-                      5. (student to student feedback) Student-to-student feedback, focused on improving learning, occurs during instruction.
-                      6. (students state criteria) Students in my classroom state the success criteria for achieving their learning target.
-                      7. (instruction state standards) The instruction of teachers in my building intentionally addresses the state standards for my grade/subject.
-                      8. (student reviews cfa) Each student reviews his/her results of common formative assessments with a teacher.",
-                      textProperties(color = notesgrey, font.size = 10))
-      
-      pptx.j <- addParagraph(pptx.j,
-                             s6.notes,
-                             height = 3.37,
-                             width = 9.57,
-                             offx = 0.22,
-                             offy = 4.25,
-                             par.properties = parProperties(text.align ="left", padding = 0)
-      )
-      
+        s6.notes <- pot("Prompt Text:
+                        1. (learning targets) The students in my classroom, including students with disabilities, write/state learning targets using 'I can' or 'I know' statements.
+                        2. (students assess) The students in my classroom, including students with disabilities, assess their progress by using evidence of student work (rubrics or portfolios).
+                        3. (students identify) The students in my classroom, including students with disabilities, identify what they should do next in their learning based on self-assessment of their progress.
+                        4. (feedback to targets) Students in my classroom, including students with disabilities, receive feedback on their progress toward their learning targets.
+                        5. (student to student feedback) Student-to-student feedback, focused on improving learning, occurs during instruction.
+                        6. (students state criteria) Students in my classroom state the success criteria for achieving their learning target.
+                        7. (instruction state standards) The instruction of teachers in my building intentionally addresses the state standards for my grade/subject.
+                        8. (student reviews cfa) Each student reviews his/her results of common formative assessments with a teacher.",
+                        textProperties(color = notesgrey, font.size = 10))
+        
+        pptx.j <- addParagraph(pptx.j,
+                               s6.notes,
+                               height = 3.3,
+                               width = 9.57,
+                               offx = 0.22,
+                               offy = 4.25,
+                               par.properties = parProperties(text.align ="left", padding = 0)
+        )
+        
       writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     
     ## SLIDE 7 ##
@@ -576,31 +599,32 @@ library(stringr)
       pptx.j <- addSlide( pptx.j, slide.layout = 'S2')
       
       #Title
-      s3.title <- pot("Overall Scale Performance",title.format)
-      pptx.j <- addParagraph(pptx.j, 
-                             s3.title, 
-                             height = 0.89,
-                             width = 8.47,
-                             offx = 0.83,
-                             offy = 0.85,
-                             par.properties=parProperties(text.align="left", padding=0)
-      )
-      
+        s3.title <- pot("Overall Scale Performance",title.format)
+        pptx.j <- addParagraph(pptx.j, 
+                               s3.title, 
+                               height = 0.89,
+                               width = 8.47,
+                               offx = 0.83,
+                               offy = 0.85,
+                               par.properties=parProperties(text.align="left", padding=0)
+        )
+        
       #Viz
       
-      #Notes
-      s3.notes <- pot("Note: A score of 4 represents a response of 'most of the time' for Effective Teaching and Learning Practices, Common Formative Assessment, and Data-based Decision-making scales, and 'agree' for the Leadership, and Professional Development scale.",
-                      notes.format)
-      pptx.j <- addParagraph(pptx.j,
-                             s3.notes,
-                             height = 1.39,
-                             width = 8.47,
-                             offx = 0.83,
-                             offy = 5.28,
-                             par.properties = parProperties(text.align ="left", padding = 0)
-      )
       
-      writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
+      #Notes
+        s3.notes <- pot("Note: A score of 4 represents a response of 'most of the time' for Effective Teaching and Learning Practices, Common Formative Assessment, and Data-based Decision-making scales, and 'agree' for the Leadership, and Professional Development scale.",
+                        notes.format)
+        pptx.j <- addParagraph(pptx.j,
+                               s3.notes,
+                               height = 1.39,
+                               width = 8.47,
+                               offx = 0.83,
+                               offy = 5.28,
+                               par.properties = parProperties(text.align ="left", padding = 0)
+        )
+        
+        writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
 
 
 
