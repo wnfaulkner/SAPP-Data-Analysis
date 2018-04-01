@@ -1153,11 +1153,11 @@ library(reshape2)
           header.columns = TRUE,
           add.rownames = FALSE,
           
-          header.cell.props = cellProperties(background.color = purpleheader),
+          header.cell.props = cellProperties(background.color = purpleheader, border.style = "none", vertical.align = "bottom"),
           header.text.props = textProperties(color = "white", font.size = 16, font.weight = "bold"),
           
-          body.cell.props = cellProperties(background.color = "white"), 
-          body.text.props = textProperties(font.size = 15, font.weight = "bold", color = "#333333")
+          body.cell.props = cellProperties(background.color = "white", border.style = "none"), 
+          body.text.props = textProperties(font.size = 15, font.weight = "bold", color = notesgrey)
         )
         
         s12.ft[,] <- borderProperties(color = "white")
@@ -1176,11 +1176,11 @@ library(reshape2)
         
       #Notes
         s12.notes <- pot("Prompt Text:
-                        1. (use cfa) I use common formative assessments aligned to the Missouri Learning Standards.
-                        2. (all in cfa) All students in my classroom participate in common formative assessments, including students with disabilities.
-                        3. (student reviews cfa) Each student reviews his/her results of common formative assessments with a teacher.
-                        4. (cfa used to plan) I use the results from common formative assessment to plan for re-teaching and/or future instruction.",
-                        textProperties(color = notesgrey, font.size = 10)
+1. (use cfa) I use common formative assessments aligned to the Missouri Learning Standards.
+2. (all in cfa) All students in my classroom participate in common formative assessments, including students with disabilities.
+3. (student reviews cfa) Each student reviews his/her results of common formative assessments with a teacher.
+4. (cfa used to plan) I use the results from common formative assessment to plan for re-teaching and/or future instruction.",
+                        textProperties(color = notesgrey, font.size = 11)
         )
         
         pptx.j <- addParagraph(pptx.j,
@@ -1300,42 +1300,42 @@ library(reshape2)
           header.columns = TRUE,
           add.rownames = FALSE,
           
-          header.cell.props = cellProperties(background.color = purpleheader),
+          header.cell.props = cellProperties(background.color = purpleheader, border.style = "none", vertical.align = "bottom"),
           header.text.props = textProperties(color = "white", font.size = 16, font.weight = "bold"),
           
-          body.cell.props = cellProperties(background.color = "white"), 
-          body.text.props = textProperties(font.size = 15, font.weight = "bold", color = "#333333")
+          body.cell.props = cellProperties(background.color = "white", border.style = "none"), 
+          body.text.props = textProperties(font.size = 15, font.weight = "bold", color = notesgrey)
         )
         
         s15.ft[,] <- borderProperties(color = "white")
-        s15.ft <- setFlexTableWidths(s15.ft, widths = c(2, rep(1.5,ncol(s15.outputs.df)-1)))      
+        s15.ft <- setFlexTableWidths(s15.ft, widths = c(3, rep(1.5,ncol(s15.outputs.df)-1)))      
         s15.ft <- setZebraStyle(s15.ft, odd = purpleshade, even = "white" ) 
         s15.ft[,2:(ncol(s15.outputs.df))] <- parProperties(text.align="center")
         
         pptx.j <- addFlexTable(pptx.j, 
                                s15.ft, 
                                height = 2.75,
-                               width = 8,
-                               offx = 1,
+                               width = 9,
+                               offx = 0.5,
                                offy = 2.0,
                                par.properties = parProperties(text.align="left", padding = 0)
         )
         
       #Notes
         s15.notes <- pot("Prompt Text:
-                        1. (leaders manage) Building leader(s) effectively manage initiatives and expectations placing a focus on improving educational practices.
-                        2. (teacher to teacher feedback) Building leadership supports the opportunity for teacher-to-teacher observation and feedback.
-                        3. (leader committed) My building administrator(s) show(s) they are committed to implementing a core set of effective instructional practices in building classrooms.
-                        4. (leader active) The building leader(s) actively problem-solve(s) with my team.",
-                         textProperties(color = notesgrey, font.size = 10)
+1. (leaders manage) Building leader(s) effectively manage initiatives and expectations placing a focus on improving educational practices.
+2. (teacher to teacher feedback) Building leadership supports the opportunity for teacher-to-teacher observation and feedback.
+3. (leader committed) My building administrator(s) show(s) they are committed to implementing a core set of effective instructional practices in building classrooms.
+4. (leader active) The building leader(s) actively problem-solve(s) with my team.",
+                         textProperties(color = notesgrey, font.size = 11)
         )
         
         pptx.j <- addParagraph(pptx.j,
                                s15.notes,
                                height = 3.3,
-                               width = 9.57,
-                               offx = 0.22,
-                               offy = 4.75,
+                               width = 9,
+                               offx = 0.5,
+                               offy = 4.5,
                                par.properties = parProperties(text.align ="left", padding = 0)
         )
 
@@ -1448,15 +1448,15 @@ library(reshape2)
           header.columns = TRUE,
           add.rownames = FALSE,
           
-          header.cell.props = cellProperties(background.color = purpleheader),
+          header.cell.props = cellProperties(background.color = purpleheader, border.style = "none", vertical.align = "bottom"),
           header.text.props = textProperties(color = "white", font.size = 16, font.weight = "bold"),
           
-          body.cell.props = cellProperties(background.color = "white"), 
-          body.text.props = textProperties(font.size = 15, font.weight = "bold", color = "#333333")
+          body.cell.props = cellProperties(background.color = "white", border.style = "none"), 
+          body.text.props = textProperties(font.size = 15, font.weight = "bold", color = notesgrey)
         )
         
         s18.ft[,] <- borderProperties(color = "white")
-        s18.ft <- setFlexTableWidths(s18.ft, widths = c(2, rep(1.5,ncol(s18.outputs.df)-1)))      
+        s18.ft <- setFlexTableWidths(s18.ft, widths = c(3, rep(1.5,ncol(s18.outputs.df)-1)))      
         s18.ft <- setZebraStyle(s18.ft, odd = purpleshade, even = "white" ) 
         s18.ft[,2:(ncol(s18.outputs.df))] <- parProperties(text.align="center")
         
@@ -1464,26 +1464,26 @@ library(reshape2)
                                s18.ft, 
                                height = 2.75,
                                width = 8,
-                               offx = 1,
+                               offx = 0.5,
                                offy = 2.0,
                                par.properties = parProperties(text.align="left", padding = 0)
         )
       
       #Notes
         s18.notes <- pot("Prompt Text:
-                        1. (pd instruction) I participate in professional development where I learn to improve my instructional practices.
-                        2. (coaching instruction) I receive coaching to facilitate my  implementation of evidence-based instructional practices.
-                        3. (pd monitor) I participate in professional development where I learn how to monitor student progress.
-                        4. (teacher feedback instruction) I receive feedback about my classroom instruction from other teachers.",
-                         textProperties(color = notesgrey, font.size = 10)
+1. (pd instruction) I participate in professional development where I learn to improve my instructional practices.
+2. (coaching instruction) I receive coaching to facilitate my  implementation of evidence-based instructional practices.
+3. (pd monitor) I participate in professional development where I learn how to monitor student progress.
+4. (teacher feedback instruction) I receive feedback about my classroom instruction from other teachers.",
+                         textProperties(color = notesgrey, font.size = 11)
         )
         
         pptx.j <- addParagraph(pptx.j,
                                s18.notes,
                                height = 3.3,
-                               width = 9.57,
-                               offx = 0.22,
-                               offy = 5.0,
+                               width = 8,
+                               offx = 0.5,
+                               offy = 4.5,
                                par.properties = parProperties(text.align ="left", padding = 0)
         )
         
