@@ -525,7 +525,7 @@ library(reshape2)
       s20.headers.v <- fig.categories
       s20.varnames.v <- names(dat.df.i)[grepl("q25",names(dat.df.i))]
       dat.df.i.s20 <- dat.df.i[,names(dat.df.i) %in% s20.varnames.v] %>% as.data.frame
-      s20.outputs.df <- apply(dat.df.i.s20, 2, function(x) mean(as.numeric(x))) %>% as.data.frame
+      s20.outputs.df <- apply(dat.df.i.s20, 2, function(x) mean(as.numeric(as.character(x)), na.rm = TRUE)) %>% as.data.frame
       s20.outputs.df <- s20.outputs.df[order(row.names(s20.outputs.df)),] %>% cbind(s20.headers.v,.) %>% as.data.frame
       names(s20.outputs.df) <- c("category","avg.progress")
       s20.outputs.df$avg.progress <- s20.outputs.df$avg.progress %>% as.character %>% as.numeric
