@@ -48,15 +48,20 @@ library(reshape2)
     dat.startrow <- which(cwis.df[,1] %>% substr(.,1,1) == "{")+1
     dat.remove.colnums <- which(cwis.df %>% names %>% substr(.,1,1) == "X")
     
-    dat.df.1 <- cwis.df[dat.startrow:length(cwis.df[,1]),                          # all rows after row where first cell begins with "{"
+  # Make data frame of base variables (that require no stacking)  
+    dat.basevars.df <- cwis.df[dat.startrow:length(cwis.df[,1]),                          # all rows after row where first cell begins with "{"
                       setdiff(1:length(names(cwis.df)),dat.remove.colnums)]        # all columns except those whose names begin with "X"
     
-    names(dat.df.1) <- names(cwis.df)[setdiff(1:length(names(cwis.df)),dat.remove.colnums)]
+    names(dat.basevars.df) <- names(cwis.df)[setdiff(1:length(names(cwis.df)),dat.remove.colnums)]
+  
+  # Make data fram of variables to be stacked
+    dat.stackvars.df <- cwis.df[dat.startrow:length(cwis.df[,1]),                          # all rows after row where first cell begins with "{"
+                                intersect(1:length(names(cwis.df)),dat.remove.colnums) %>% # ResponseId plus all columns whose names begin with "X"
+                                c(which(tolower(names(cwis.df))=="responseid"),.)]        
   
   # Re-stack & collapse columns that are split up because of survey branching 
     split.names.ls <- strsplit(names(cwis.df),"_")
-    #split.names.elements.v <- split.names.ls %>% .[sapply(., length)==1] %>% which %>% unlist
-    
+
     base.varnames.v <-  split.names.ls %>% .[sapply(., length)==1] %>% unlist
     
     ans.opt.varnames.v <- split.names.ls %>% 
@@ -78,7 +83,7 @@ library(reshape2)
     for(h in 1:length(branch.q.names.v)){     ### START OF LOOP BY QUESTION; only for questions with branched variables
       
       q.name.h <- branch.q.names.v[h]                                 # base question number
-      varnames.h <- names(dat.df.1)[grep(paste(q.name.h,"_",sep=""), names(dat.df.1))]  # all columns in dat.df.1 that belong to base question number
+      varnames.h <- names(dat.stackvars.df)[grep(paste(q.name.h,"_",sep=""), names(dat.stackvars.df))]  # all columns in dat.basevars.df that belong to base question number
      
         q.ans.options.h <- paste(varnames.h %>% strsplit(.,"_") %>% lapply(., `[[`, 2) %>% unique %>% unlist, # final column names once branching is collapsed
                                 varnames.h %>% strsplit(.,"_") %>% lapply(., `[[`, 3) %>% unique %>% unlist,
@@ -90,9 +95,17 @@ library(reshape2)
         
         for(g in 1:length(q.ans.options.h)){    ### START OF LOOP BY ANSWER OPTION
 
-          check.varnames.h <- str_sub(names(dat.df.1), start = -nchar(q.ans.options.h[g]))
-          uncollapsed.df <- grep(q.ans.options.h[g],check.varnames.h) %>% c(grepl("ResponseId", names(dat.df.1)) %>% which,.) %>% dat.df.1[,.] # data frame with all relevant columns for answer option and ResponseID up front (for re-merging later)
-          collapsed.df <- melt(uncollapsed.df, id.vars=1)[,c(1,3)] %>% .[!is.na(.[2]),]
+          check.varnames.h <- str_sub(names(dat.stackvars.df), start = -nchar(q.ans.options.h[g]))
+          
+          uncollapsed.df <- grep(q.ans.options.h[g],check.varnames.h) %>% 
+                                c(grepl("ResponseId", names(dat.stackvars.df)) %>% which,.) %>% 
+                                      dat.stackvars.df[,.] # data frame with all relevant columns for answer option and ResponseID up front (for re-merging later)
+          
+          uncollapsed.df$newvar <- apply(uncollapsed.df[,2:ncol(uncollapsed.df)] %>% as.matrix , 1, function (x) {paste(x,collapse = "")}) #create single column which is pasted together answers from all columns (should only be one per Response ID)
+          
+          collapsed.df <- uncollapsed.df[,c(which(tolower(names(uncollapsed.df))=="responseid"),which(tolower(names(uncollapsed.df))=="newvar"))]
+          #collapsed.df <- melt(uncollapsed.df, id.vars=1)[,c(1,3)] %>% .[!is.na(.[2]),]
+          
           names(collapsed.df) <- c("ResponseId",q.ans.options.h[g])        
           collapsed.h.ls[[g]] <- collapsed.df
         
@@ -104,15 +117,15 @@ library(reshape2)
       } ### END OF LOOP BY QUESTION
       
     #Re-merge with non-branched variables
-      q.ls[[1]] <- dat.df.1[names(dat.df.1) %in% base.varnames.v]
-      q.ls[[2]] <- dat.df.1[names(dat.df.1) %in% c("ResponseId",ans.opt.varnames.v)]
-      dat.df.2 <- q.ls %>% Reduce(function(x, y) full_join(x,y, all = TRUE), .) 
+      q.ls[[1]] <- dat.basevars.df[names(dat.basevars.df) %in% base.varnames.v]
+      q.ls[[2]] <- dat.basevars.df[names(dat.basevars.df) %in% c("ResponseId",ans.opt.varnames.v)]
+      dat.remerged.df <- q.ls %>% Reduce(function(x, y) full_join(x,y, all = TRUE), .) 
 
    
   # Lookup Tables
   
     #Variable names & questions, adjusting for collapsed columns
-      vars.df <- names(dat.df.2) %>% as.data.frame(., stringsAsFactors = FALSE)
+      vars.df <- names(dat.remerged.df) %>% as.data.frame(., stringsAsFactors = FALSE)
       names(vars.df) <- "q.id"
       vars.df$question.full <- ""
       q.ans.options.v <- varname.match.ls %>% do.call(c, .)
@@ -167,13 +180,13 @@ library(reshape2)
       
       
   # Variable renaming for useful variables
-    names(dat.df.2)[names(dat.df.2) == "Q27_1"] <- "district.name"
-    names(dat.df.2)[names(dat.df.2) == "Q27_2"] <- "school.name"
-    names(dat.df.2)[names(dat.df.2) == "Q6"] <- "role"
-    names(dat.df.2) <- names(dat.df.2) %>% tolower # all variable names in lower case for less error-prone matching
+    names(dat.remerged.df)[names(dat.remerged.df) == "Q27_1"] <- "district.name"
+    names(dat.remerged.df)[names(dat.remerged.df) == "Q27_2"] <- "school.name"
+    names(dat.remerged.df)[names(dat.remerged.df) == "Q6"] <- "role"
+    names(dat.remerged.df) <- names(dat.remerged.df) %>% tolower # all variable names in lower case for less error-prone matching
     
   # Exclude responses with 'NA' for school name
-    dat.df <- dat.df.2[!is.na(dat.df.2$school.name),] # removes 481 rows in 2017 fall test data, but none so far in 2018 spring data (stays at 315 responses)  
+    dat.df <- dat.remerged.df[!is.na(dat.remerged.df$school.name),] # removes 481 rows in 2017 fall test data, but none so far in 2018 spring data (stays at 315 responses)  
     dat.df$school.name <- dat.df$school.name %>% tolower # put all school names in lower case for less error-prone matching
 
 ########################################################################################################################################################      
