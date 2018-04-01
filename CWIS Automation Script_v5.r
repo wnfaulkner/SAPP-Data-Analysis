@@ -353,6 +353,7 @@ library(reshape2)
         s9.outputs.df <- Reduce(function(df1,df2) full_join(df1, df2,by = "ans.opt"), s9.ls)
         s9.outputs.df <- s9.outputs.df[,c(which(names(s9.outputs.df)=="ans.opt"),1,3:length(names(s9.outputs.df)))] # re-order columns
         s9.outputs.df <- full_join(s9.outputs.df, ans.opt.always.df, by = c("ans.opt"="ans.text.freq"))
+        s9.outputs.df <- s9.outputs.df[!is.na(s9.outputs.df$ans.text.agreement),]
         s9.outputs.df[is.na(s9.outputs.df)] <- 0
         s9.outputs.df <- s9.outputs.df[order(s9.outputs.df$ans.num, decreasing = TRUE),
                        c(which(grepl("ans.opt",names(s9.outputs.df))),which(!grepl("ans",names(s9.outputs.df))))]
@@ -996,17 +997,18 @@ library(reshape2)
                                par.properties=parProperties(text.align="left", padding=0)
         )
       
-      #Viz
+        #Viz
         s9.ft <- FlexTable(
           data = s9.outputs.df,
           header.columns = TRUE,
           add.rownames = FALSE,
           
-          header.cell.props = cellProperties(background.color = purpleheader),
+          header.cell.props = cellProperties(background.color = purpleheader, border.style = "none", vertical.align = "bottom"),
           header.text.props = textProperties(color = "white", font.size = 16, font.weight = "bold"),
           
-          body.cell.props = cellProperties(background.color = "white"), 
-          body.text.props = textProperties(font.size = 15, font.weight = "bold", color = "#333333")
+          body.cell.props = cellProperties(background.color = "white", border.style = "none"), 
+          body.text.props = textProperties(font.size = 15, font.weight = "bold", color = notesgrey)
+          
         )
         
         s9.ft[,] <- borderProperties(color = "white")
@@ -1018,25 +1020,26 @@ library(reshape2)
                                s9.ft, 
                                height = 2.75,
                                width = 8,
-                               offx = 0.83,
+                               offx = 1.22,
                                offy = 2.0,
                                par.properties = parProperties(text.align="left", padding = 0)
         )
-      
+        s9.ft
+        
       #Notes
         s9.notes <- pot("Prompt Text:
-                        1. (use cfa) I use common formative assessments aligned to the Missouri Learning Standards.
-                        2. (all in cfa) All students in my classroom participate in common formative assessments, including students with disabilities.
-                        3. (student reviews cfa) Each student reviews his/her results of common formative assessments with a teacher.
-                        4. (cfa used to plan) I use the results from common formative assessment to plan for re-teaching and/or future instruction.",
-                        textProperties(color = notesgrey, font.size = 10)
+1. (use cfa) I use common formative assessments aligned to the Missouri Learning Standards.
+2. (all in cfa) All students in my classroom participate in common formative assessments, including students with disabilities.
+3. (student reviews cfa) Each student reviews his/her results of common formative assessments with a teacher.
+4. (cfa used to plan) I use the results from common formative assessment to plan for re-teaching and/or future instruction.",
+                        textProperties(color = notesgrey, font.size = 13)
         )
         
         pptx.j <- addParagraph(pptx.j,
                                s9.notes,
                                height = 3.3,
-                               width = 9.57,
-                               offx = 0.22,
+                               width = 8.3,
+                               offx = 1.22,
                                offy = 4.25,
                                par.properties = parProperties(text.align ="left", padding = 0)
         )
