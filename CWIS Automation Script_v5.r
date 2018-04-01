@@ -38,6 +38,8 @@ library(reshape2)
   #cwis.ss <- 	gs_key("13--0r4jDrW8DgC4cBlrbwIOS7nLfHsjaLFqbk_9qjVs",verbose = TRUE)
   #cwis.df <- 	gs_read(cwis.ss, ws = 1, range = NULL, literal = TRUE) %>% as.data.frame()
   
+  names(cwis.df) <- cwis.df %>% names %>% tolower
+  
   # Variable helper table
   cwis.embed.helper.ss <- gs_key("13-EHwqBrV7T4cI5l99flBlvFPunE-Dl1uwPyc1SOn4k",verbose = TRUE) 
   cwis.embed.helper.df <- 	gs_read(cwis.embed.helper.ss, ws = 1, range = NULL, literal = TRUE) %>% as.data.frame()
@@ -46,11 +48,11 @@ library(reshape2)
 
   # Remove trailing column and rows with extra labels
     dat.startrow <- which(cwis.df[,1] %>% substr(.,1,1) == "{")+1
-    dat.remove.colnums <- which(cwis.df %>% names %>% substr(.,1,1) == "X")
+    dat.remove.colnums <- which(cwis.df %>% names %>% substr(.,1,1) == "x")
     
   # Make data frame of base variables (that require no stacking)  
-    dat.basevars.df <- cwis.df[dat.startrow:length(cwis.df[,1]),                          # all rows after row where first cell begins with "{"
-                      setdiff(1:length(names(cwis.df)),dat.remove.colnums)]        # all columns except those whose names begin with "X"
+    dat.basevars.df <- cwis.df[dat.startrow:length(cwis.df[,1]),                           # all rows after row where first cell begins with "{"
+                        setdiff(1:length(names(cwis.df)),dat.remove.colnums)]              # all columns except those whose names begin with "X"
     
     names(dat.basevars.df) <- names(cwis.df)[setdiff(1:length(names(cwis.df)),dat.remove.colnums)]
   
@@ -73,13 +75,13 @@ library(reshape2)
                                     sapply(., function(x){paste(x, collapse = "_")})   
     branch.q.names.v <- strsplit(branch.ans.opt.varnames.v, "_") %>% 
                                   unlist %>% 
-                                    .[grep("Q",.)] %>% 
+                                    .[grep("q",.)] %>% 
                                       unique 
     
     q.ls <- list()
     varname.match.ls <- list()
-    #h <- 4 #for testing loop
     
+    #h <- 4 #for testing loop
     for(h in 1:length(branch.q.names.v)){     ### START OF LOOP BY QUESTION; only for questions with branched variables
       
       q.name.h <- branch.q.names.v[h]                                 # base question number
@@ -98,27 +100,27 @@ library(reshape2)
           check.varnames.h <- str_sub(names(dat.stackvars.df), start = -nchar(q.ans.options.h[g]))
           
           uncollapsed.df <- grep(q.ans.options.h[g],check.varnames.h) %>% 
-                                c(grepl("ResponseId", names(dat.stackvars.df)) %>% which,.) %>% 
+                                c(grepl("responseid", names(dat.stackvars.df)) %>% which,.) %>% 
                                       dat.stackvars.df[,.] # data frame with all relevant columns for answer option and ResponseID up front (for re-merging later)
           
           uncollapsed.df$newvar <- apply(uncollapsed.df[,2:ncol(uncollapsed.df)] %>% as.matrix , 1, function (x) {paste(x,collapse = "")}) #create single column which is pasted together answers from all columns (should only be one per Response ID)
           
           collapsed.df <- uncollapsed.df[,c(which(tolower(names(uncollapsed.df))=="responseid"),which(tolower(names(uncollapsed.df))=="newvar"))]
-          #collapsed.df <- melt(uncollapsed.df, id.vars=1)[,c(1,3)] %>% .[!is.na(.[2]),]
-          
-          names(collapsed.df) <- c("ResponseId",q.ans.options.h[g])        
+
+          names(collapsed.df) <- c("responseid",q.ans.options.h[g])        
           collapsed.h.ls[[g]] <- collapsed.df
         
         } ### END OF LOOP BY ANSWER OPTION
       
         q.dat.df <- collapsed.h.ls %>% Reduce(function(x, y) full_join(x,y, all = TRUE), .)
-        q.ls[[h + 2]] <- q.dat.df
+        q.ls[[h + 1]] <- q.dat.df
    
       } ### END OF LOOP BY QUESTION
       
     #Re-merge with non-branched variables
-      q.ls[[1]] <- dat.basevars.df[names(dat.basevars.df) %in% base.varnames.v]
-      q.ls[[2]] <- dat.basevars.df[names(dat.basevars.df) %in% c("ResponseId",ans.opt.varnames.v)]
+      
+      q.ls[[1]] <- dat.basevars.df
+      #q.ls[[2]] <- dat.basevars.df[names(dat.basevars.df) %in% c("ResponseId",ans.opt.varnames.v)]
       dat.remerged.df <- q.ls %>% Reduce(function(x, y) full_join(x,y, all = TRUE), .) 
 
    
@@ -141,7 +143,7 @@ library(reshape2)
           match.id.f <- q.id.f
         }
         
-        vars.df$question.full[f] <- cwis.df[1,] %>% .[names(cwis.df)==match.id.f] %>% as.character
+        vars.df$question.full[f] <- cwis.df[1,] %>% .[grep(match.id.f,names(cwis.df))] %>% as.matrix %>% as.character
       }
       
       #Remove repeated parts of questions
@@ -170,8 +172,6 @@ library(reshape2)
                               c("Strongly agree","Agree","Neither agree or disagree","Disagree","Strongly disagree")
                             ) %>% as.data.frame
       names(ans.opt.always.df) <- c("ans.num","ans.text.freq","ans.text.agreement")
-      #ans.opt.always.df$ans.text.freq <- paste(ans.opt.always.df$ans.num, ans.opt.always.df$ans.text.freq, sep = ". ")
-      #ans.opt.always.df$ans.text.agreement <- paste(ans.opt.always.df$ans.num, ans.opt.always.df$ans.text.agreement, sep = ". ")
       ans.opt.always.df[,1] <- ans.opt.always.df[,1] %>% as.character %>% as.numeric
       ans.opt.always.df[,2] <- ans.opt.always.df[,2] %>% as.character
       ans.opt.always.df[,3] <- ans.opt.always.df[,3] %>% as.character
@@ -180,14 +180,18 @@ library(reshape2)
       
       
   # Variable renaming for useful variables
-    names(dat.remerged.df)[names(dat.remerged.df) == "Q27_1"] <- "district.name"
-    names(dat.remerged.df)[names(dat.remerged.df) == "Q27_2"] <- "school.name"
-    names(dat.remerged.df)[names(dat.remerged.df) == "Q6"] <- "role"
+    names(dat.remerged.df)[names(dat.remerged.df) == "q27_1"] <- "district.name"
+    names(dat.remerged.df)[names(dat.remerged.df) == "q27_2"] <- "school.name"
+    dat.remerged.df$school.name <- dat.remerged.df$school.name %>% tolower # put all school names in lower case for less error-prone matching
+    names(dat.remerged.df)[names(dat.remerged.df) == "q6"] <- "role"
     names(dat.remerged.df) <- names(dat.remerged.df) %>% tolower # all variable names in lower case for less error-prone matching
     
   # Exclude responses with 'NA' for school name
-    dat.df <- dat.remerged.df[!is.na(dat.remerged.df$school.name),] # removes 481 rows in 2017 fall test data, but none so far in 2018 spring data (stays at 315 responses)  
-    dat.df$school.name <- dat.df$school.name %>% tolower # put all school names in lower case for less error-prone matching
+    dat.df <- dat.remerged.df[dat.remerged.df$school.name %>% as.character(.) != "",] # removes 481 rows in 2017 fall test data, 346 for 2018 spring data
+  
+  # Exclude responses with "TEST" in the comments, #!SHOULD FIND OUT HOW TO EXCLUDE OTHER TEST ENTRIES IF NECESSARY
+    dat.df <- dat.df[!grepl("TEST",dat.df$q39.1),]
+
 
 ########################################################################################################################################################      
 ### PRODUCING DATA, TABLES, & CHARTS ###
@@ -198,12 +202,12 @@ library(reshape2)
    
     # Create data frame for this loop - restrict to responses from school name i
       school.name.i <- school.names[i] %>% tolower
-      dat.df.i <- dat.df[dat.df$school.name == school.name.i,] %>% tbl_df
-      district.name.i <- dat.df.i$district.name %>% unique
+      dat.df.i <- dat.df[dat.df$school.name == school.name.i,] 
+      district.name.i <- dat.df.i$district.name %>% unique %>% as.character
     
     #S2 Table for slide 2 "Participation Details"
     {
-      s2.mtx <- table(dat.df.i$role) %>% as.matrix
+      s2.mtx <- table(dat.df.i$role %>% as.character) %>% as.matrix
       s2.df <- cbind(row.names(s2.mtx),s2.mtx[,1]) %>% as.data.frame
       names(s2.df) <- c("Role","# Responses")
       rownames(s2.df) <- c()
@@ -219,7 +223,8 @@ library(reshape2)
                          "Other",
                          "Total") %>% as.data.frame(., stringsAsFactors = FALSE)
       names(s2.roworder.df) <- "Role"
-      s2.df <- full_join(s2.roworder.df %>% as.data.frame,s2.df, by = "Role")
+      s2.outputs.df <- full_join(s2.roworder.df %>% as.data.frame,s2.df, by = "Role")
+      s2.outputs.df[is.na(s2.outputs.df)] <- 0  #replace any NA with 0
     }      
     #S3 Table for slide 3 "Overall Scale Performance"
     {
@@ -644,7 +649,7 @@ library(reshape2)
       
       #Viz
         s2.ft <- FlexTable(
-            data = s2.df,
+            data = s2.outputs.df,
             header.columns = TRUE,
             add.rownames = FALSE,
             
@@ -654,7 +659,7 @@ library(reshape2)
             body.cell.props = cellProperties(background.color = "white", border.style = "none")
           )
         
-        s2.ft[dim(s2.df)[1],] <- chprop(textProperties(font.weight = "bold")) #Bold text on last line (totals)
+        s2.ft[dim(s2.outputs.df)[1],] <- chprop(textProperties(font.weight = "bold")) #Bold text on last line (totals)
         s2.ft[,2] <- chprop(parProperties(text.align = "center")) #Center align numbers in second column
         s2.ft <- setFlexTableWidths(s2.ft, widths = c(4, 2.5))      
         s2.ft <- setZebraStyle(s2.ft, odd = purpleshade, even = "white" ) 
