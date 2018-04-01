@@ -280,7 +280,7 @@ library(reshape2)
                             "student reviews cfa"),sep = ". "
                           )
       
-      s6.varnames.v <- vars.df$q.id[!is.na(vars.df$etlp)] #names(dat.df.i)[grepl("q4_",names(dat.df.i))]  #[c(1:7,10)]
+      s6.varnames.v <- vars.df$q.id[!is.na(vars.df$etlp)] 
       s6.var.df <- cbind(1:length(s6.headers.v),s6.varnames.v,s6.headers.v) %>% as.data.frame(., stringsAsFactors = FALSE)
       names(s6.var.df) <- c("num","s6.varname","s6.header")
       
@@ -300,6 +300,7 @@ library(reshape2)
       s6.outputs.df[is.na(s6.outputs.df)] <- 0
       s6.outputs.df <- s6.outputs.df[order(s6.outputs.df$ans.num, decreasing = TRUE),
                      c(which(grepl("ans.opt",names(s6.outputs.df))),which(!grepl("ans",names(s6.outputs.df))))]
+      s6.outputs.df <- s6.outputs.df[s6.outputs.df$ans.opt != "",]
       names(s6.outputs.df) <- c("Answer option",
                                 "1. learning targets",
                                 "2. students assess",
@@ -400,7 +401,9 @@ library(reshape2)
       s12.outputs.df <- Reduce(function(df1,df2) full_join(df1, df2,by = "ans.opt"), s12.ls)
       s12.outputs.df <- s12.outputs.df[,c(which(names(s12.outputs.df)=="ans.opt"),1,3:length(names(s12.outputs.df)))] # re-order columns
       s12.outputs.df <- full_join(s12.outputs.df, ans.opt.always.df, by = c("ans.opt"="ans.text.freq"))
+      s12.outputs.df <- s12.outputs.df[!is.na(s12.outputs.df$ans.text.agreement),]
       s12.outputs.df[is.na(s12.outputs.df)] <- 0
+      s12.outputs.df <- s12.outputs.df[s12.outputs.df$ans.opt != "",]
       s12.outputs.df <- s12.outputs.df[order(s12.outputs.df$ans.num, decreasing = TRUE),
                                      c(which(grepl("ans.opt",names(s12.outputs.df))),which(!grepl("ans",names(s12.outputs.df))))]
       names(s12.outputs.df) <- c("Answer option",s12.headers.v)
@@ -447,6 +450,7 @@ library(reshape2)
       s15.outputs.df <- Reduce(function(df1,df2) full_join(df1, df2,by = "ans.opt"), s15.ls)
       s15.outputs.df <- s15.outputs.df[,c(which(names(s15.outputs.df)=="ans.opt"),1,3:length(names(s15.outputs.df)))] # re-order columns
       s15.outputs.df <- full_join(s15.outputs.df, ans.opt.always.df, by = c("ans.opt"="ans.text.agreement"))
+      s15.outputs.df <- s15.outputs.df[!is.na(s15.outputs.df$ans.text.freq),]
       s15.outputs.df[is.na(s15.outputs.df)] <- 0
       s15.outputs.df <- s15.outputs.df[order(s15.outputs.df$ans.num, decreasing = TRUE),
                                        c(which(grepl("ans.opt",names(s15.outputs.df))),which(!grepl("ans",names(s15.outputs.df))))]
@@ -494,6 +498,7 @@ library(reshape2)
       s18.outputs.df <- Reduce(function(df1,df2) full_join(df1, df2,by = "ans.opt"), s18.ls)
       s18.outputs.df <- s18.outputs.df[,c(which(names(s18.outputs.df)=="ans.opt"),1,3:length(names(s18.outputs.df)))] # re-order columns
       s18.outputs.df <- full_join(s18.outputs.df, ans.opt.always.df, by = c("ans.opt"="ans.text.agreement"))
+      s18.outputs.df <- s18.outputs.df[!is.na(s18.outputs.df$ans.text.freq),]
       s18.outputs.df[is.na(s18.outputs.df)] <- 0
       s18.outputs.df <- s18.outputs.df[order(s18.outputs.df$ans.num, decreasing = TRUE),
                                        c(which(grepl("ans.opt",names(s18.outputs.df))),which(!grepl("ans",names(s18.outputs.df))))]
@@ -517,7 +522,6 @@ library(reshape2)
     }
     #S20 Bar Chart "Recent Progress"
     {
-      
       s20.headers.v <- fig.categories
       s20.varnames.v <- names(dat.df.i)[grepl("q25",names(dat.df.i))]
       dat.df.i.s20 <- dat.df.i[,names(dat.df.i) %in% s20.varnames.v] %>% as.data.frame
@@ -854,11 +858,7 @@ library(reshape2)
           s6.ft[,1] <- parProperties(text.align = 'right') #Change row header alignment to right
           s6.ft[,2:(ncol(s6.outputs.df))] <-  parProperties(text.align='center') #Center align numbers in table
           
-          
-                #                              textProperties(font.size = 11, color = notesgrey, font.weight = "bold"))
-         
-        
-           s6.ft
+          #s6.ft  #FOR TESTING
           
           pptx.j <- addFlexTable(pptx.j, 
                                  s6.ft, 
