@@ -30,7 +30,9 @@ library(reshape2)
 
   # Main data
   #CSV
-  read.csv()
+  cwis.df <- read.csv("c:/Users/WNF/Desktop/2018 Spring.csv",
+                      stringsAsFactors = TRUE,
+                      header = TRUE)
   
   #Google Sheets
   #cwis.ss <- 	gs_key("13--0r4jDrW8DgC4cBlrbwIOS7nLfHsjaLFqbk_9qjVs",verbose = TRUE)
@@ -44,15 +46,15 @@ library(reshape2)
 
   # Remove trailing column and rows with extra labels
     dat.startrow <- which(cwis.df[,1] %>% substr(.,1,1) == "{")+1
-    dat.remove.colnums <- which(cwis.df %>% names %>% substr(.,1,1) == "X")+1
+    dat.remove.colnums <- which(cwis.df %>% names %>% substr(.,1,1) == "X")
     
     dat.df.1 <- cwis.df[dat.startrow:length(cwis.df[,1]),                          # all rows after row where first cell begins with "{"
                       setdiff(1:length(names(cwis.df)),dat.remove.colnums)]        # all columns except those whose names begin with "X"
     
-    names(dat.df.1) <- names(cwis.df)[1:dim(dat.df.1)[2]]
+    names(dat.df.1) <- names(cwis.df)[setdiff(1:length(names(cwis.df)),dat.remove.colnums)]
   
   # Re-stack & collapse columns that are split up because of survey branching 
-    split.names.ls <- strsplit(names(dat.df.1),"_")
+    split.names.ls <- strsplit(names(cwis.df),"_")
     #split.names.elements.v <- split.names.ls %>% .[sapply(., length)==1] %>% which %>% unlist
     
     base.varnames.v <-  split.names.ls %>% .[sapply(., length)==1] %>% unlist
@@ -204,7 +206,7 @@ library(reshape2)
                          "Other",
                          "Total") %>% as.data.frame(., stringsAsFactors = FALSE)
       names(s2.roworder.df) <- "Role"
-      s2.df <- inner_join(s2.roworder.df %>% as.data.frame,s2.df, by = "Role")
+      s2.df <- full_join(s2.roworder.df %>% as.data.frame,s2.df, by = "Role")
     }      
     #S3 Table for slide 3 "Overall Scale Performance"
     {
