@@ -14,6 +14,8 @@
 ### INITIAL SETUP ###
 rm(list=ls()) #Remove lists
 
+start_time <- Sys.time()
+
 #library(devtools)
 library(magrittr)
 library(googlesheets)
@@ -26,8 +28,8 @@ library(reshape2)
 ### LOAD DATA ###
 
   # School & district name selections
-  school.names <- c("Malden Elementary","Green Forest Elementary") #!
-
+  school.names <- c("All") #!
+  
   # Main data
   #CSV
   cwis.df <- read.csv("c:/Users/WNF/Desktop/2018 Spring.csv",
@@ -195,15 +197,24 @@ library(reshape2)
 
 ########################################################################################################################################################      
 ### PRODUCING DATA, TABLES, & CHARTS ###
-
-  i <- 1 # for testing loop
+    
+  if(tolower(school.names) %in% "all" %>% any){school.names <- dat.df$school.name %>% unique}else{}
+  progress.bar.i <- txtProgressBar(min = 0, max = 100, style = 3)
+  maxrow <- length(school.names)
   
-  #for(i in 1:length(school.names)){   #START OF LOOP BY SCHOOL
+  #i <- 1 # for testing loop
+  for(i in 1:length(school.names)){   #START OF LOOP BY SCHOOL
    
     # Create data frame for this loop - restrict to responses from school name i
-      school.name.i <- school.names[i] %>% tolower
+      school.name.i <- school.names[i] %>% tolower 
+      if(school.name.i %in% c("district office","other") %>% any){next()}else{}
       dat.df.i <- dat.df[dat.df$school.name == school.name.i,] 
+      school.name.i <- gsub("\\/"," ",school.name.i) #in case there is a slash in the school name itself, this replaces it so file storage for ppt works properly
       district.name.i <- dat.df.i$district.name %>% unique %>% as.character
+      if(length(district.name.i) > 1){
+                                        print(c(school.name.i,district.name.i))
+                                        next()
+                                      }else{}
     
     #S2 Table for slide 2 "Participation Details"
     {
@@ -545,14 +556,19 @@ library(reshape2)
   #Copy template file into target directory & rename with individual report name 
     if(j == 1){
       template.file <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation/Report Template/CWIS Template.pptx"
-      target.dir <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation/3. R script outputs/"
+      target.dir <- paste("C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation/3. R script outputs/",
+                          "Output_",
+                          gsub(":",".",Sys.time()), sep = "")
+      dir.create(target.dir)
     }
     
     #file.copy(template.file,target.dir)
     target.file.j <- paste( target.dir,
-                            "CWIS Report_",school.names[j],
-                            "_",
-                            gsub(":",".",Sys.time()),".pptx", sep="") 
+                            "/",
+                            "CWIS Report_",
+                            school.name.i,
+                            Sys.Date(),
+                           ".pptx", sep="") 
     file.copy(template.file, target.file.j)
     
   #Powerpoint Formatting Setup
@@ -618,7 +634,7 @@ library(reshape2)
                                offy = 2.78,
                                par.properties=parProperties(text.align="left", padding=0)
                                 )
-        pptx.j <- addParagraph(pptx.j, #Subtitle
+        pptx.j <- addParagraph(pptx.j, #Subtitle (school name)
                                subtitle.j, 
                                height = 0.67,
                                width = 8.21,
@@ -627,12 +643,12 @@ library(reshape2)
                                par.properties=parProperties(text.align="left", padding=0)
                                )
       
-        pptx.j <- addParagraph(pptx.j, 
+        pptx.j <- addParagraph(pptx.j, #District
                                districttitle.j, 
                                height = 0.67,
                                width = 7.76,
                                offx = 1.27,
-                               offy = 5.35,
+                               offy = 5.85,
                                par.properties=parProperties(text.align="left", padding=0)
                                )
       writeDoc(pptx.j, file = target.file.j) #test Slide 1 build
@@ -920,8 +936,8 @@ library(reshape2)
             width = 0.8) + 
           ylim(0,100) +
           labs(x = "", y = "") +
-          scale_x_discrete(labels = substring(s7.headers.v[order(s7.headers.v, decreasing = TRUE)], 4)) +
-          geom_text(
+          scale_x_discrete(labels = substring(s7.headers.v[order(s7.headers.v, decreasing = TRUE)], 4)) + #category labels (for eventual y axis)
+          geom_text( #data labels
             aes(y = 10, label = paste(s7.outputs.df$score_school_rate, "%", sep = "")), 
             size = 4,
             color = "white") + 
@@ -1069,20 +1085,21 @@ library(reshape2)
           geom_bar(
             aes(y = score_school_rate), 
             stat="identity", 
-            fill = backgroundgreen, 
+            fill = titlegreen, 
             width = 0.8) + 
           ylim(0,100) +
-          labs(x = "", y = "% Implementing 'Always' or 'Most of the time'") +                 #axis labels
-          scale_x_discrete(labels = s10.headers.v[order(s10.headers.v, decreasing = TRUE)]) +
+          labs(x = "", y = "") +                 #axis labels
+          scale_x_discrete(labels = substring(s10.headers.v[order(s10.headers.v, decreasing = TRUE)],4)) +
           geom_text(                                                                          #data labels
-            aes(y = score_school_rate + 8, label = paste(s10.outputs.df$score_school_rate, "%", sep = "")), 
+            aes(y = 10, label = paste(s10.outputs.df$score_school_rate, "%", sep = "")), 
             size = 4,
-            color = graphlabelsgrey) + 
+            color = "white") + 
           theme(panel.background = element_blank(),
                 panel.grid.major.y = element_blank(),
                 panel.grid.major.x = element_line(color = graphgridlinesgrey),
-                axis.text.x = element_text(size = 15, color = graphlabelsgrey),
-                axis.text.y = element_text(size = 15, color = graphlabelsgrey)
+                axis.text.y = element_text(size = 15, color = graphlabelsgrey),
+                axis.text.x = element_blank(),
+                axis.ticks = element_blank()
           ) +     
           coord_flip() 
         
@@ -1217,20 +1234,21 @@ library(reshape2)
           geom_bar(
             aes(y = score_school_rate), 
             stat="identity", 
-            fill = backgroundgreen, 
+            fill = titlegreen, 
             width = 0.8) + 
           ylim(0,100) +
-          labs(x = "", y = "% Implementing 'Always' or 'Most of the time'") +                 #axis labels
-          scale_x_discrete(labels = s13.headers.v[order(s13.headers.v, decreasing = TRUE)]) +
+          labs(x = "", y ="") +                 #axis labels
+          scale_x_discrete(labels = substring(s13.headers.v[order(s13.headers.v, decreasing = TRUE)], 4)) +
           geom_text(                                                                          #data labels
-            aes(y = score_school_rate + 8, label = paste(s13.outputs.df$score_school_rate, "%", sep = "")), 
+            aes(y = 10, label = paste(s13.outputs.df$score_school_rate, "%", sep = "")), 
             size = 4,
-            color = graphlabelsgrey) + 
+            color = "white") + 
           theme(panel.background = element_blank(),
                 panel.grid.major.y = element_blank(),
                 panel.grid.major.x = element_line(color = graphgridlinesgrey),
-                axis.text.x = element_text(size = 15, color = graphlabelsgrey),
-                axis.text.y = element_text(size = 15, color = graphlabelsgrey)
+                axis.text.x = element_blank(),
+                axis.text.y = element_text(size = 15, color = graphlabelsgrey),
+                axis.ticks = element_blank()
           ) +     
           coord_flip() 
         
@@ -1364,20 +1382,21 @@ library(reshape2)
           geom_bar(
             aes(y = score_school_rate), 
             stat="identity", 
-            fill = backgroundgreen, 
+            fill = titlegreen, 
             width = 0.8) + 
           ylim(0,100) +
-          labs(x = "", y = "% Implementing 'Always' or 'Most of the time'") +                 #axis labels
-          scale_x_discrete(labels = s16.headers.v[order(s16.headers.v, decreasing = TRUE)]) +
+          labs(x = "", y = "") +                 #axis labels
+          scale_x_discrete(labels = substring(s16.headers.v[order(s16.headers.v, decreasing = TRUE)],4)) +
           geom_text(                                                                          #data labels
-            aes(y = score_school_rate + 8, label = paste(s16.outputs.df$score_school_rate, "%", sep = "")), 
+            aes(y = 10, label = paste(s16.outputs.df$score_school_rate, "%", sep = "")), 
             size = 4,
-            color = graphlabelsgrey) + 
+            color = "white") + 
           theme(panel.background = element_blank(),
                 panel.grid.major.y = element_blank(),
                 panel.grid.major.x = element_line(color = graphgridlinesgrey),
-                axis.text.x = element_text(size = 15, color = graphlabelsgrey),
-                axis.text.y = element_text(size = 15, color = graphlabelsgrey)
+                axis.text.x = element_blank(),
+                axis.text.y = element_text(size = 15, color = graphlabelsgrey),
+                axis.ticks = element_blank()
           ) +     
           coord_flip() 
         
@@ -1512,20 +1531,21 @@ library(reshape2)
           geom_bar(
             aes(y = score_school_rate), 
             stat="identity", 
-            fill = backgroundgreen, 
+            fill = titlegreen, 
             width = 0.8) + 
           ylim(0,100) +
-          labs(x = "", y = "% Implementing 'Always' or 'Most of the time'") +                 #axis labels
-          scale_x_discrete(labels = s19.headers.v[order(s19.headers.v, decreasing = TRUE)]) +
+          labs(x = "", y = "") +                 #axis labels
+          scale_x_discrete(labels = substring(s19.headers.v[order(s19.headers.v, decreasing = TRUE)],4)) +
           geom_text(                                                                          #data labels
-            aes(y = score_school_rate + 8, label = paste(s19.outputs.df$score_school_rate, "%", sep = "")), 
+            aes(y = 10, label = paste(s19.outputs.df$score_school_rate, "%", sep = "")), 
             size = 4,
-            color = graphlabelsgrey) + 
+            color = "white") + 
           theme(panel.background = element_blank(),
                 panel.grid.major.y = element_blank(),
                 panel.grid.major.x = element_line(color = graphgridlinesgrey),
-                axis.text.x = element_text(size = 15, color = graphlabelsgrey),
-                axis.text.y = element_text(size = 15, color = graphlabelsgrey)
+                axis.text.x = element_blank(),
+                axis.text.y = element_text(size = 15, color = graphlabelsgrey),
+                axis.ticks = element_blank()
           ) +     
           coord_flip() 
         
@@ -1629,10 +1649,13 @@ library(reshape2)
         
       writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     }  
-      
+
+  setTxtProgressBar(progress.bar.i, 100*i/maxrow)      
   } #END OF LOOP J BY SCHOOL
-      
-      
+
+  end_time <- Sys.time()
+  proc.time <- end_time - start_time
+  proc.time  
 
 ### EXPORTING RESULTS TO GOOGLE SHEETS ###
   
