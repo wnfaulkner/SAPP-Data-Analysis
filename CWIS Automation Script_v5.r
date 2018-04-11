@@ -32,7 +32,14 @@ library(reshape2)
   
   # Main data
   #CSV
-  cwis.df <- read.csv("c:/Users/WNF/Desktop/2018 Spring.csv",
+    #Set working directory
+      wd <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation/1. Survey Data/"
+      setwd(wd)
+    #Read most recently modified csv file in working directory
+      survey.data.csvs <- list.files()[grepl(".csv",list.files()) & !grepl(".gsheet",list.files())]
+      current.survey.data.file <- survey.data.csvs[order(survey.data.csvs %>% file.mtime, decreasing =  TRUE)][1]
+      
+      cwis.df <- read.csv(current.survey.data.file,
                       stringsAsFactors = TRUE,
                       header = TRUE)
   
@@ -46,8 +53,9 @@ library(reshape2)
   cwis.embed.helper.ss <- gs_key("13-EHwqBrV7T4cI5l99flBlvFPunE-Dl1uwPyc1SOn4k",verbose = TRUE) 
   cwis.embed.helper.df <- 	gs_read(cwis.embed.helper.ss, ws = 1, range = NULL, literal = TRUE) %>% as.data.frame()
 
+########################################################################################################################################################      
 ### DATA CLEANING & PREP ###
-
+{
   # Remove trailing column and rows with extra labels
     dat.startrow <- which(cwis.df[,1] %>% substr(.,1,1) == "{")+1
     dat.remove.colnums <- which(cwis.df %>% names %>% substr(.,1,1) == "x")
@@ -189,11 +197,15 @@ library(reshape2)
     names(dat.remerged.df) <- names(dat.remerged.df) %>% tolower # all variable names in lower case for less error-prone matching
     
   # Exclude responses with 'NA' for school name
-    dat.df <- dat.remerged.df[dat.remerged.df$school.name %>% as.character(.) != "",] # removes 481 rows in 2017 fall test data, 346 for 2018 spring data
+    dat.df <- dat.remerged.df[dat.remerged.df$school.name %>% as.character(.) != "",] # removes 353 rows in 2018 spring test data
+    
+  # Exclude responses with 'District Office' for school name
+    dat.df <- dat.df[dat.df$school.name %>% as.character(.) != "district office",] # removes 35 rows in 2018 spring test data
+    
   
   # Exclude responses with "TEST" in the comments, #!SHOULD FIND OUT HOW TO EXCLUDE OTHER TEST ENTRIES IF NECESSARY
     dat.df <- dat.df[!grepl("TEST",dat.df$q39.1),]
-
+}
 
 ########################################################################################################################################################      
 ### PRODUCING DATA, TABLES, & CHARTS ###
@@ -202,15 +214,21 @@ library(reshape2)
   progress.bar.i <- txtProgressBar(min = 0, max = 100, style = 3)
   maxrow <- length(school.names)
   
-  #i <- 1 # for testing loop
-  for(i in 1:length(school.names)){   #START OF LOOP BY SCHOOL
+  i <- 1 # for testing loop
+  #for(i in 1:30){   #for testing loop
+  #for(i in 1:length(school.names)){   #START OF LOOP BY SCHOOL
    
     # Create data frame for this loop - restrict to responses from school name i
       school.name.i <- school.names[i] %>% tolower 
+      
       if(school.name.i %in% c("district office","other") %>% any){next()}else{}
+      
       dat.df.i <- dat.df[dat.df$school.name == school.name.i,] 
+      
       school.name.i <- gsub("\\/"," ",school.name.i) #in case there is a slash in the school name itself, this replaces it so file storage for ppt works properly
+      
       district.name.i <- dat.df.i$district.name %>% unique %>% as.character
+      
       if(length(district.name.i) > 1){
                                         print(c(school.name.i,district.name.i))
                                         next()
@@ -538,9 +556,9 @@ library(reshape2)
       s20.varnames.v <- names(dat.df.i)[grepl("q25",names(dat.df.i))]
       dat.df.i.s20 <- dat.df.i[,names(dat.df.i) %in% s20.varnames.v] %>% as.data.frame
       s20.outputs.df <- apply(dat.df.i.s20, 2, function(x) mean(as.numeric(as.character(x)), na.rm = TRUE)) %>% as.data.frame
-      s20.outputs.df <- s20.outputs.df[order(row.names(s20.outputs.df)),] %>% cbind(s20.headers.v,.) %>% as.data.frame
+      s20.outputs.df <- s20.outputs.df %>% cbind(s20.headers.v,.) %>% as.data.frame
       names(s20.outputs.df) <- c("category","avg.progress")
-      s20.outputs.df$avg.progress <- s20.outputs.df$avg.progress %>% as.character %>% as.numeric
+      s20.outputs.df$avg.progress <- s20.outputs.df$avg.progress %>% as.character %>% as.numeric %>% round(., digits = 1)
     }
   
       
@@ -566,8 +584,9 @@ library(reshape2)
     target.file.j <- paste( target.dir,
                             "/",
                             "CWIS Report_",
+                            district.name.i,
+                            "_",
                             school.name.i,
-                            Sys.Date(),
                            ".pptx", sep="") 
     file.copy(template.file, target.file.j)
     
@@ -606,7 +625,7 @@ library(reshape2)
   
   #Edit powerpoint template
     
-    ## SLIDE 1 ##
+    ## SLIDE 1 ## Cover Slide
     {
       pptx.j <- addSlide( pptx.j, slide.layout = 'Title Slide', bookmark = 1)
       
@@ -653,7 +672,7 @@ library(reshape2)
                                )
       writeDoc(pptx.j, file = target.file.j) #test Slide 1 build
     }  
-    ## SLIDE 2 ##
+    ## SLIDE 2 ## Participation Details
     {
       pptx.j <- addSlide( pptx.j, slide.layout = 'S2')
   
@@ -698,8 +717,8 @@ library(reshape2)
         
       writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     
-    }    
-    ## SLIDE 3 ##
+    }   
+    ## SLIDE 3 ## Overall Scale Performance
     {  
       pptx.j <- addSlide( pptx.j, slide.layout = 'S2')
       
@@ -768,7 +787,7 @@ library(reshape2)
                           offy = 2.16)
         
       #Notes
-        s3.notes <- pot("Notes: (a) A score of 4 represents a response of 'most of the time' for Effective Teaching and Learning Practices, Common Formative Assessment, and Data-based Decision-making scales, and 'agree' for the Leadership, and Professional Development scale. (b) The 2016-17 state average is marked with the yellow bar.",
+        s3.notes <- pot("Notes: (a) A score of 4 represents a response of 'most of the time' for Effective Teaching and Learning Practices, Common Formative Assessment, and Data-based Decision-making scales, and 'agree' for the Leadership, and Professional Development scale. (b) The 2017-18 state average is marked with the yellow bar.",
                         notes.format)
         
         pptx.j <- addParagraph(pptx.j,
@@ -780,12 +799,24 @@ library(reshape2)
                                par.properties = parProperties(text.align ="left", padding = 0)
         )
         
+        s3.notes.2 <- pot("The 2017-18 state average is marked with the yellow bar.",
+                          textProperties(color = "black", font.size = 14))
+        
+        pptx.j <- addParagraph(pptx.j,
+                               s3.notes.2,
+                               height = 0.71,
+                               width = 8.47,
+                               offx = 2.74,
+                               offy = 6.85,
+                               par.properties = parProperties(text.align ="left", padding = 0)
+        )
+        
       #Page number
         pptx.j <- addPageNumber(pptx.j)
         
       writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     }  
-    ## SLIDE 4 ## REMOVED
+    ## SLIDE 4 ## Individual Response Plot REMOVED
     {  
       #pptx.j <- addSlide( pptx.j, slide.layout = 'S2')
       
@@ -820,7 +851,7 @@ library(reshape2)
         
       #writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     }  
-    ## SLIDE 5 ##
+    ## SLIDE 5 ## Section Title - ETLP
     {  
       pptx.j <- addSlide( pptx.j, slide.layout = 'Section Header')
       
@@ -840,7 +871,7 @@ library(reshape2)
         
       writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     }
-    ## Slide 6 ##
+    ## Slide 6 ## ETLP Scale Performance
     {
         pptx.j <- addSlide( pptx.j, slide.layout = 'S2')
         
@@ -912,7 +943,7 @@ library(reshape2)
           
         writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     }
-    ## SLIDE 7 ##
+    ## SLIDE 7 ## ETLP Scale Rates of Implementation
     {  
       pptx.j <- addSlide( pptx.j, slide.layout = 'S2')
       
@@ -961,7 +992,7 @@ library(reshape2)
                           offy = 2)
       
       #Notes
-        s7.notes <- pot("Documented above are the percent of school respondents who answered that they use the following practices either 'most of the time' or 'always.' Please see page 6 for a list of complete prompts.",
+        s7.notes <- pot("Documented above are the percent of school respondents who answered that they use the following practices either 'most of the time' or 'always.' Please see page 5 for a list of complete prompts.",
                         notes.format)
         pptx.j <- addParagraph(pptx.j,
                                s7.notes,
@@ -977,7 +1008,7 @@ library(reshape2)
         
         writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     }
-    ## SLIDE 8 ##
+    ## SLIDE 8 ## Section Title - CFA
     {  
       pptx.j <- addSlide( pptx.j, slide.layout = 'Section Header')
       
@@ -998,7 +1029,7 @@ library(reshape2)
         
         writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     }
-    ## Slide 9 ##
+    ## Slide 9 ## CFA Scale Performance
     {
       pptx.j <- addSlide( pptx.j, slide.layout = 'S2')
       
@@ -1020,10 +1051,10 @@ library(reshape2)
           add.rownames = FALSE,
           
           header.cell.props = cellProperties(background.color = purpleheader, border.style = "none", vertical.align = "bottom"),
-          header.text.props = textProperties(color = "white", font.size = 16, font.weight = "bold"),
+          header.text.props = textProperties(color = "white", font.size = 11, font.weight = "bold"),
           
           body.cell.props = cellProperties(background.color = "white", border.style = "none"), 
-          body.text.props = textProperties(font.size = 15, font.weight = "bold", color = notesgrey)
+          body.text.props = textProperties(font.size = 12, font.weight = "bold", color = notesgrey)
           
         )
         
@@ -1048,7 +1079,7 @@ library(reshape2)
 2. (all in cfa) All students in my classroom participate in common formative assessments, including students with disabilities.
 3. (student reviews cfa) Each student reviews his/her results of common formative assessments with a teacher.
 4. (cfa used to plan) I use the results from common formative assessment to plan for re-teaching and/or future instruction.",
-                        textProperties(color = notesgrey, font.size = 13)
+                        textProperties(color = notesgrey, font.size = 11)
         )
         
         pptx.j <- addParagraph(pptx.j,
@@ -1056,7 +1087,7 @@ library(reshape2)
                                height = 3.3,
                                width = 8.3,
                                offx = 1.22,
-                               offy = 4.25,
+                               offy = 3.25,
                                par.properties = parProperties(text.align ="left", padding = 0)
         )
       
@@ -1065,7 +1096,7 @@ library(reshape2)
       
       writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     }
-    ## SLIDE 10 ##
+    ## SLIDE 10 ## CFA Scale Rates of Implementation
     {  
       pptx.j <- addSlide( pptx.j, slide.layout = 'S2')
       
@@ -1112,7 +1143,7 @@ library(reshape2)
                           offy = 2)
         
       #Notes
-        s10.notes <- pot("Documented above are the percent of school respondents who answered that they use the following practices either “most of the time” or “always.” Please see page 9 for a list of complete prompts.",
+        s10.notes <- pot("Documented above are the percent of school respondents who answered that they use the following practices either “most of the time” or “always.” Please see page 8 for a list of complete prompts.",
                         notes.format)
         pptx.j <- addParagraph(pptx.j,
                                s10.notes,
@@ -1128,7 +1159,7 @@ library(reshape2)
 
       writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     }
-    ## SLIDE 11 ##
+    ## SLIDE 11 ## Section Title - DBDM
     {  
       pptx.j <- addSlide( pptx.j, slide.layout = 'Section Header')
       
@@ -1149,7 +1180,7 @@ library(reshape2)
       
       writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     }
-    ## Slide 12 ##
+    ## Slide 12 ## DBDM Scale Performance
     {
       pptx.j <- addSlide( pptx.j, slide.layout = 'S2')
       
@@ -1171,14 +1202,14 @@ library(reshape2)
           add.rownames = FALSE,
           
           header.cell.props = cellProperties(background.color = purpleheader, border.style = "none", vertical.align = "bottom"),
-          header.text.props = textProperties(color = "white", font.size = 16, font.weight = "bold"),
+          header.text.props = textProperties(color = "white", font.size = 11, font.weight = "bold"),
           
           body.cell.props = cellProperties(background.color = "white", border.style = "none"), 
-          body.text.props = textProperties(font.size = 15, font.weight = "bold", color = notesgrey)
+          body.text.props = textProperties(font.size = 12, font.weight = "bold", color = notesgrey)
         )
         
         s12.ft[,] <- borderProperties(color = "white")
-        s12.ft <- setFlexTableWidths(s12.ft, widths = c(2, rep(1.5,ncol(s12.outputs.df)-1)))      
+        s12.ft <- setFlexTableWidths(s12.ft, widths = c(1.8, rep(1.3,ncol(s12.outputs.df)-1)))      
         s12.ft <- setZebraStyle(s12.ft, odd = purpleshade, even = "white" ) 
         s12.ft[,2:(ncol(s12.outputs.df))] <- parProperties(text.align="center")
         
@@ -1186,7 +1217,7 @@ library(reshape2)
                                s12.ft, 
                                height = 2.75,
                                width = 8,
-                               offx = 0.22,
+                               offx = 0.82,
                                offy = 2.0,
                                par.properties = parProperties(text.align="left", padding = 0)
         )
@@ -1204,8 +1235,8 @@ library(reshape2)
                                s12.notes,
                                height = 3.3,
                                width = 9.57,
-                               offx = 0.22,
-                               offy = 4.25,
+                               offx = 0.82,
+                               offy = 3.55,
                                par.properties = parProperties(text.align ="left", padding = 0)
         )
 
@@ -1214,7 +1245,7 @@ library(reshape2)
       
       writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     }  
-    ## SLIDE 13 ##
+    ## SLIDE 13 ## DBDM Scale Rates of Implementation
     {  
       pptx.j <- addSlide( pptx.j, slide.layout = 'S2')
       
@@ -1261,7 +1292,7 @@ library(reshape2)
                           offy = 2)
         
       #Notes
-        s13.notes <- pot("Documented above are the percent of school respondents who answered that they use the following practices either “most of the time” or “always.” Please see page 9 for a list of complete prompts.",
+        s13.notes <- pot("Documented above are the percent of school respondents who answered that they use the following practices either “most of the time” or “always.” Please see page 11 for a list of complete prompts.",
                          notes.format)
         pptx.j <- addParagraph(pptx.j,
                                s13.notes,
@@ -1277,7 +1308,7 @@ library(reshape2)
 
       writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     }
-    ## SLIDE 14 ##
+    ## SLIDE 14 ## Section Title - Leadership
     {  
       pptx.j <- addSlide( pptx.j, slide.layout = 'Section Header')
       
@@ -1297,7 +1328,7 @@ library(reshape2)
 
       writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     }
-    ## Slide 15 ##
+    ## Slide 15 ## Leadership Scale Performance
     {
       pptx.j <- addSlide( pptx.j, slide.layout = 'S2')
       
@@ -1319,22 +1350,23 @@ library(reshape2)
           add.rownames = FALSE,
           
           header.cell.props = cellProperties(background.color = purpleheader, border.style = "none", vertical.align = "bottom"),
-          header.text.props = textProperties(color = "white", font.size = 16, font.weight = "bold"),
+          header.text.props = textProperties(color = "white", font.size = 11, font.weight = "bold"),
           
           body.cell.props = cellProperties(background.color = "white", border.style = "none"), 
-          body.text.props = textProperties(font.size = 15, font.weight = "bold", color = notesgrey)
+          body.text.props = textProperties(font.size = 12, font.weight = "bold", color = notesgrey)
         )
         
         s15.ft[,] <- borderProperties(color = "white")
-        s15.ft <- setFlexTableWidths(s15.ft, widths = c(3, rep(1.5,ncol(s15.outputs.df)-1)))      
+        s15.ft <- setFlexTableWidths(s15.ft, widths = c(1.8, rep(1.4,ncol(s15.outputs.df)-1)))      
         s15.ft <- setZebraStyle(s15.ft, odd = purpleshade, even = "white" ) 
         s15.ft[,2:(ncol(s15.outputs.df))] <- parProperties(text.align="center")
+        s15.ft$header <- parProperties(text.align = "center")
         
         pptx.j <- addFlexTable(pptx.j, 
                                s15.ft, 
                                height = 2.75,
                                width = 9,
-                               offx = 0.5,
+                               offx = 0.82,
                                offy = 2.0,
                                par.properties = parProperties(text.align="left", padding = 0)
         )
@@ -1351,9 +1383,9 @@ library(reshape2)
         pptx.j <- addParagraph(pptx.j,
                                s15.notes,
                                height = 3.3,
-                               width = 9,
-                               offx = 0.5,
-                               offy = 4.5,
+                               width = 8.5,
+                               offx = 0.82,
+                               offy = 3.5,
                                par.properties = parProperties(text.align ="left", padding = 0)
         )
 
@@ -1362,7 +1394,7 @@ library(reshape2)
         
       writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     }  
-    ## SLIDE 16 ##
+    ## SLIDE 16 ## Leadership Scale Rates of Implementation
     {  
       pptx.j <- addSlide( pptx.j, slide.layout = 'S2')
       
@@ -1409,7 +1441,7 @@ library(reshape2)
                           offy = 2)
         
       #Notes
-        s16.notes <- pot("Documented above are the percent of school respondents who answered that they use the following practices either “most of the time” or “always.” Please see page 9 for a list of complete prompts.",
+        s16.notes <- pot("Documented above are the percent of school respondents who answered that they use the following practices either “most of the time” or “always.” Please see page 14 for a list of complete prompts.",
                          notes.format)
         pptx.j <- addParagraph(pptx.j,
                                s16.notes,
@@ -1425,7 +1457,7 @@ library(reshape2)
         
       writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     }
-    ## SLIDE 17 ##
+    ## SLIDE 17 ## Section Title - Professional Development
     {  
       pptx.j <- addSlide( pptx.j, slide.layout = 'Section Header')
       
@@ -1446,7 +1478,7 @@ library(reshape2)
         
       writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     }
-    ## Slide 18 ##
+    ## Slide 18 ## Professional Development Scale Performance
     {
       pptx.j <- addSlide( pptx.j, slide.layout = 'S2')
       
@@ -1468,14 +1500,14 @@ library(reshape2)
           add.rownames = FALSE,
           
           header.cell.props = cellProperties(background.color = purpleheader, border.style = "none", vertical.align = "bottom"),
-          header.text.props = textProperties(color = "white", font.size = 16, font.weight = "bold"),
+          header.text.props = textProperties(color = "white", font.size = 12, font.weight = "bold"),
           
           body.cell.props = cellProperties(background.color = "white", border.style = "none"), 
-          body.text.props = textProperties(font.size = 15, font.weight = "bold", color = notesgrey)
+          body.text.props = textProperties(font.size = 11, font.weight = "bold", color = notesgrey)
         )
         
         s18.ft[,] <- borderProperties(color = "white")
-        s18.ft <- setFlexTableWidths(s18.ft, widths = c(3, rep(1.5,ncol(s18.outputs.df)-1)))      
+        s18.ft <- setFlexTableWidths(s18.ft, widths = c(1.8, rep(1.5,ncol(s18.outputs.df)-1)))      
         s18.ft <- setZebraStyle(s18.ft, odd = purpleshade, even = "white" ) 
         s18.ft[,2:(ncol(s18.outputs.df))] <- parProperties(text.align="center")
         
@@ -1483,7 +1515,7 @@ library(reshape2)
                                s18.ft, 
                                height = 2.75,
                                width = 8,
-                               offx = 0.5,
+                               offx = 0.82,
                                offy = 2.0,
                                par.properties = parProperties(text.align="left", padding = 0)
         )
@@ -1501,8 +1533,8 @@ library(reshape2)
                                s18.notes,
                                height = 3.3,
                                width = 8,
-                               offx = 0.5,
-                               offy = 4.5,
+                               offx = 0.82,
+                               offy = 3.5,
                                par.properties = parProperties(text.align ="left", padding = 0)
         )
         
@@ -1511,7 +1543,7 @@ library(reshape2)
       
       writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     }  
-    ## SLIDE 19 ##
+    ## SLIDE 19 ## Professional Development Scale Rates of Implementation
     {  
       pptx.j <- addSlide( pptx.j, slide.layout = 'S2')
       
@@ -1558,7 +1590,7 @@ library(reshape2)
                           offy = 2)
         
       #Notes
-        s19.notes <- pot("Documented above are the percent of school respondents who answered that they use the following practices either “most of the time” or “always.” Please see page 9 for a list of complete prompts.",
+        s19.notes <- pot("Documented above are the percent of school respondents who answered that they use the following practices either “most of the time” or “always.” Please see page 17 for a list of complete prompts.",
                          notes.format)
         pptx.j <- addParagraph(pptx.j,
                                s19.notes,
@@ -1574,7 +1606,7 @@ library(reshape2)
 
       writeDoc(pptx.j, file = target.file.j) #test Slide build up to this point
     }
-    ## SLIDE 20 ##
+    ## SLIDE 20 ## Recent Progress
     {  
       pptx.j <- addSlide( pptx.j, slide.layout = 'S2')
       
@@ -1607,7 +1639,7 @@ library(reshape2)
                                       "Professional Development") %>% rev) +
           geom_text(aes(
             y = 17, 
-            label = s20.outputs.df$avg.progress %>% round(., digits = 1) %>% paste(.,"%", sep = ""),
+            label = s20.outputs.df$avg.progress %>% round(., digits = 1) %>% format(., nsmall = 1),
           ), 
           size = 4,
           color = "white") + 
@@ -1632,7 +1664,7 @@ library(reshape2)
                           offy = 2.16)
         
       #Notes
-        s20.notes <- pot("Finally, we asked participants to rate the progress of their building in four key areas between the 2015-2016 school year and March of 2017. A value of 50 represents things are about the same; anything greater than 50 refers to progress in the positive direction.",
+        s20.notes <- pot("Finally, we asked participants to rate the progress of their building in five key areas between the start of the current school year and March of 2018. A value of 50 represents things are about the same; anything greater than 50 refers to progress in the positive direction.",
                         notes.format)
         
         pptx.j <- addParagraph(pptx.j,
