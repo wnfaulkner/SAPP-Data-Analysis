@@ -215,9 +215,9 @@ library(reshape2)
   progress.bar.i <- txtProgressBar(min = 0, max = 100, style = 3)
   maxrow <- length(school.names)
   
-  #i <- 1 # for testing loop
+  i <- 1 # for testing loop
   #for(i in 1:30){   #for testing loop
-  for(i in 1:length(school.names)){   #START OF LOOP BY SCHOOL
+  #for(i in 1:length(school.names)){   #START OF LOOP BY SCHOOL
    
     # Create data frame for this loop - restrict to responses from school name i
       school.name.i <- school.names[i] %>% tolower 
@@ -243,7 +243,7 @@ library(reshape2)
       rownames(s2.df) <- c()
       s2.df$Role <- s2.df$Role %>% as.character #convert factor to character
       s2.df$`# Responses` <- s2.df$`# Responses` %>% as.character %>% as.numeric #convert factor to numeric
-      s2.df <- rbind(s2.df, c("Total", sum(s2.df[,2] %>% as.character %>% as.numeric))) #add "Total" row
+      s2s2.df <- rbind(s2.df, c("Total", sum(s2.df[,2] %>% as.character %>% as.numeric))) #add "Total" row
       s2.roworder.df <- c("Special Educator",
                          "Classroom Teacher",
                          "Building Administrator",
@@ -765,7 +765,7 @@ library(reshape2)
                                      ) +
                     geom_text(aes(                                                          #data labels inside base of columns
                                 y = 0.4, 
-                                label = s3.outputs.df$score_school_avg %>% round(.,1),
+                                label = s3.outputs.df$score_school_avg %>% round(.,1) %>% format(., nsmall = 1)
                                 ), 
                               size = 4,
                               color = "white") + 
