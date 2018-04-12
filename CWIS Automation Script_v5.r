@@ -206,6 +206,7 @@ library(reshape2)
   # Exclude responses with "TEST" in the comments, #!SHOULD FIND OUT HOW TO EXCLUDE OTHER TEST ENTRIES IF NECESSARY
     dat.df <- dat.df[!grepl("TEST",dat.df$q39.1),]
 }
+  
 
 ########################################################################################################################################################      
 ### PRODUCING DATA, TABLES, & CHARTS ###
@@ -214,9 +215,9 @@ library(reshape2)
   progress.bar.i <- txtProgressBar(min = 0, max = 100, style = 3)
   maxrow <- length(school.names)
   
-  i <- 1 # for testing loop
+  #i <- 1 # for testing loop
   #for(i in 1:30){   #for testing loop
-  #for(i in 1:length(school.names)){   #START OF LOOP BY SCHOOL
+  for(i in 1:length(school.names)){   #START OF LOOP BY SCHOOL
    
     # Create data frame for this loop - restrict to responses from school name i
       school.name.i <- school.names[i] %>% tolower 
@@ -275,7 +276,8 @@ library(reshape2)
         #Re-coding variables as numeric
         ordinal.to.numeric.f <- function(x){
           recode(x, Never=1, Sometimes = 2, `About half the time` = 3 , `Most of the time` = 4, Always = 5,
-                    `Strongly disagree` = 1, Disagree = 2, `Neither agree or disagree` = 3, Agree = 5, `Strongly agree` = 5)
+                    `Strongly disagree` = 1, Disagree = 2, `Neither agree or disagree` = 3, Agree = 4, `Strongly agree` = 5,
+                    `BLANK` = NA_real_)
         }
         
         #Calculate average of re-coded variables
