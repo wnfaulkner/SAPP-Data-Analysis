@@ -1443,7 +1443,7 @@ library(reshape2)
                           offy = 2)
         
       #Notes
-        s16.notes <- pot("Documented above are the percent of school respondents who answered that they use the following practices either “most of the time” or “always.” Please see page 14 for a list of complete prompts.",
+        s16.notes <- pot("Documented above are the percent of school respondents who answered that they use the following practices either “agree” or “strongly agree.” Please see page 14 for a list of complete prompts.",
                          notes.format)
         pptx.j <- addParagraph(pptx.j,
                                s16.notes,
@@ -1592,7 +1592,7 @@ library(reshape2)
                           offy = 2)
         
       #Notes
-        s19.notes <- pot("Documented above are the percent of school respondents who answered that they use the following practices either “most of the time” or “always.” Please see page 17 for a list of complete prompts.",
+        s19.notes <- pot("Documented above are the percent of school respondents who answered that they use the following practices either “agree” or “strongly agree.” Please see page 17 for a list of complete prompts.",
                          notes.format)
         pptx.j <- addParagraph(pptx.j,
                                s19.notes,
