@@ -1054,7 +1054,7 @@ library(reshape2)
           
           header.cell.props = cellProperties(background.color = purpleheader, border.style = "none", vertical.align = "bottom"),
           header.text.props = textProperties(color = "white", font.size = 11, font.weight = "bold"),
-          
+          header.par.props = parProperties(text.align = "center"),
           body.cell.props = cellProperties(background.color = "white", border.style = "none"), 
           body.text.props = textProperties(font.size = 12, font.weight = "bold", color = notesgrey)
           
@@ -1205,7 +1205,7 @@ library(reshape2)
           
           header.cell.props = cellProperties(background.color = purpleheader, border.style = "none", vertical.align = "bottom"),
           header.text.props = textProperties(color = "white", font.size = 11, font.weight = "bold"),
-          
+          header.par.props = parProperties(text.align = "center"),
           body.cell.props = cellProperties(background.color = "white", border.style = "none"), 
           body.text.props = textProperties(font.size = 12, font.weight = "bold", color = notesgrey)
         )
@@ -1353,7 +1353,7 @@ library(reshape2)
           
           header.cell.props = cellProperties(background.color = purpleheader, border.style = "none", vertical.align = "bottom"),
           header.text.props = textProperties(color = "white", font.size = 11, font.weight = "bold"),
-          
+          header.par.props = parProperties(text.align = "center"),
           body.cell.props = cellProperties(background.color = "white", border.style = "none"), 
           body.text.props = textProperties(font.size = 12, font.weight = "bold", color = notesgrey)
         )
@@ -1503,7 +1503,7 @@ library(reshape2)
           
           header.cell.props = cellProperties(background.color = purpleheader, border.style = "none", vertical.align = "bottom"),
           header.text.props = textProperties(color = "white", font.size = 12, font.weight = "bold"),
-          
+          header.par.props = parProperties(text.align = "center"),
           body.cell.props = cellProperties(background.color = "white", border.style = "none"), 
           body.text.props = textProperties(font.size = 11, font.weight = "bold", color = notesgrey)
         )
