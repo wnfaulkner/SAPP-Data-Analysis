@@ -235,8 +235,8 @@ library(reshape2)
   maxrow <- length(school.names)
   
   #i <- 1 # for testing loop
-  for(i in c(1,110:115)){   #for testing loop
-  #for(i in 1:length(school.names)){   #START OF LOOP BY SCHOOL
+  #for(i in c(1,110:115)){   #for testing loop
+  for(i in 1:length(school.names)){   #START OF LOOP BY SCHOOL
    
     # Create data frame for this loop - restrict to responses from school name i
       school.name.i <- school.names[i] %>% tolower 
