@@ -606,7 +606,7 @@ library(reshape2)
   #Copy template file into target directory & rename with individual report name 
     if(j == 1){
       template.file <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation/Report Template/CWIS Template.pptx"
-      target.dir <- paste("G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-04 CWIS Automation for CW/R script outputs",
+      target.dir <- paste("G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-04 CWIS Automation for CW/R script outputs/",
                           "Output_",
                           gsub(":",".",Sys.time()), sep = "")
       dir.create(target.dir)
@@ -1262,18 +1262,20 @@ library(reshape2)
         
       #Notes
         s12.notes <- pot("Prompt Text:
-1. (team reviews data) My team reviews data at meetings.1
-2. (team positive) Members of the team demonstrate positive, solution-oriented interactions. 1
-3. (effective teaming practices) My team uses effective teaming practices such as providing agendas, establishing roles, seeking consensus and documenting minutes. 1
+1. (team reviews data) My team reviews data at meetings.*
+2. (team positive) Members of the team demonstrate positive, solution-oriented interactions.*
+3. (effective teaming practices) My team uses effective teaming practices such as providing agendas, establishing roles, seeking consensus and documenting minutes.*
 4. (data determine practices) Using data, instructional staff collaborate to determine which effective practice(s) will maximize the positive learning outcomes for all students, including students with disabilities.
-5. (visual representations) Visual representations of individual student, classroom, and building data are used for tracking growth and making decisions.",
+5. (visual representations) Visual representations of individual student, classroom, and building data are used for tracking growth and making decisions.
+                         
+*Only participants who indicated that they are members of data teams were presented with questions about the functioning of those teams.",
                         textProperties(color = notesgrey, font.size = 11)
         )
         
         pptx.j <- addParagraph(pptx.j,
                                s12.notes,
                                height = 3.3,
-                               width = 9.57,
+                               width = 8,
                                offx = 0.82,
                                offy = 3.55,
                                par.properties = parProperties(text.align ="left", padding = 0)
