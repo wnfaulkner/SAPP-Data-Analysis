@@ -605,8 +605,8 @@ library(reshape2)
     
   #Copy template file into target directory & rename with individual report name 
     if(j == 1){
-      template.file <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation/Report Template/CWIS Template.pptx"
-      target.dir <- paste("C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-04 CWIS Automation for CW/R script outputs/",
+      template.file <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation/Report Template/CWIS Template.pptx"
+      target.dir <- paste("G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-04 CWIS Automation for CW/R script outputs",
                           "Output_",
                           gsub(":",".",Sys.time()), sep = "")
       dir.create(target.dir)
@@ -1262,10 +1262,11 @@ library(reshape2)
         
       #Notes
         s12.notes <- pot("Prompt Text:
-1. (use cfa) I use common formative assessments aligned to the Missouri Learning Standards.
-2. (all in cfa) All students in my classroom participate in common formative assessments, including students with disabilities.
-3. (student reviews cfa) Each student reviews his/her results of common formative assessments with a teacher.
-4. (cfa used to plan) I use the results from common formative assessment to plan for re-teaching and/or future instruction.",
+1. (team reviews data) My team reviews data at meetings.1
+2. (team positive) Members of the team demonstrate positive, solution-oriented interactions. 1
+3. (effective teaming practices) My team uses effective teaming practices such as providing agendas, establishing roles, seeking consensus and documenting minutes. 1
+4. (data determine practices) Using data, instructional staff collaborate to determine which effective practice(s) will maximize the positive learning outcomes for all students, including students with disabilities.
+5. (visual representations) Visual representations of individual student, classroom, and building data are used for tracking growth and making decisions.",
                         textProperties(color = notesgrey, font.size = 11)
         )
         
