@@ -37,7 +37,7 @@ library(reshape2)
       #wd <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-04 CWIS Automation for CW/"
       
       #Thinkpad
-      wd <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-04 CWIS Automation for CW"
+      wd <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation for MMD/1. Survey Data/"
       setwd(wd)
     #Read most recently modified csv file in working directory
       survey.data.csvs <- list.files()[grepl(".csv",list.files()) & !grepl(".gsheet",list.files())]
@@ -273,7 +273,6 @@ library(reshape2)
                          "School Counselor",
                          "Instructional Coach",
                          "School Social Worker",
-                         "Media Specialist",
                          "Other",
                          "Total") %>% as.data.frame(., stringsAsFactors = FALSE)
       names(s2.roworder.df) <- "Role"
@@ -583,14 +582,14 @@ library(reshape2)
     }
     #S20 Bar Chart "Recent Progress"
     {
-      s20.headers.v <- c("Collaborative Data Teaming","Data-based Decision-making", "Common Formative Assessment","Effective Teaching and Learning")
+      s20.headers.v <- fig.categories
       s20.varnames.v <- names(dat.df.i)[grepl("q25",names(dat.df.i))]
       dat.df.i.s20 <- dat.df.i[,names(dat.df.i) %in% s20.varnames.v] %>% as.data.frame
       s20.outputs.df <- apply(dat.df.i.s20, 2, function(x) mean(as.numeric(as.character(x)), na.rm = TRUE)) %>% as.data.frame
       s20.outputs.df <- s20.outputs.df %>% cbind(s20.headers.v,.) %>% as.data.frame
       names(s20.outputs.df) <- c("category","avg.progress")
       s20.outputs.df$avg.progress <- s20.outputs.df$avg.progress %>% as.character %>% as.numeric %>% round(., digits = 1)
-      s20.outputs.df <- s20.outputs.df[c(3,4,1,2),]
+      s20.outputs.df <- s20.outputs.df[c(1,2,3,4,5),]
     }
   
       
@@ -605,8 +604,8 @@ library(reshape2)
     
   #Copy template file into target directory & rename with individual report name 
     if(j == 1){
-      template.file <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation/Report Template/CWIS Template.pptx"
-      target.dir <- paste("G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-04 CWIS Automation for CW/R script outputs/",
+      template.file <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation for MMD/Report Template/CWIS Template.pptx"
+      target.dir <- paste("G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation for MMD/3. R script outputs/",
                           "Output_",
                           gsub(":",".",Sys.time()), sep = "")
       dir.create(target.dir)
@@ -1673,10 +1672,11 @@ library(reshape2)
             width = 0.8) + 
           ylim(0,100) +
           labs(x = "", y = "") +
-          scale_x_discrete(labels = c("Common Formative Assessment",
-                                      "Effective Teaching and Learning",
-                                      "Collaborative Data Teaming",
-                                      "Data-based Decision-making"
+          scale_x_discrete(labels = c("Effective Teaching and Learning",
+                                      "Common Formative Assessment",
+                                      "Data-based Decision-making",
+                                      "Leadership",
+                                      "Professional Development"
                                       ) %>% rev) +
           geom_text(aes(
             y = 17, 
