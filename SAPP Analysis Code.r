@@ -52,15 +52,38 @@ library(xlsx)
         
         #i=1
         for(i in 1:length(sapp.wb.sheetnames)){
-          sapp.df.i <- read.xlsx( file = current.survey.file,
+          sapp.df.i <- read.xlsx( file = current.survey.file,            #Read sheet into data frame
                                 sheetName = sapp.wb.sheetnames[i],
                                 as.data.frame = TRUE,
                                 )
-          sapp.df.name.i <- paste(sapp.wb.sheetnames[i],".df",sep = "")
-          assign(sapp.df.name.i, sapp.df.i)
+          sapp.ls[[i]] <- sapp.df.i                                     #Store data frame in list (for cleaning)
+          #sapp.df.name.i <- paste(sapp.wb.sheetnames[i],".df",sep = "") #Create name for new data frame
+          #assign(sapp.df.name.i, sapp.df.i)                             #Assign name to new data frame
         }
         
-  #Google Sheets
+########################################################################################################################################################      
+### DATA CLEANING & PREP ###
+{
+  #Removing Test Emails from all tables
+  apply()
+        
+        
+        
+        
+} 
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        #Google Sheets
   #sapp.ss <- 	gs_key("13--0r4jDrW8DgC4cBlrbwIOS7nLfHsjaLFqbk_9qjVs",verbose = TRUE)
   #sapp.df <- 	gs_read(sapp.ss, ws = 1, range = NULL, literal = TRUE) %>% as.data.frame()
   
