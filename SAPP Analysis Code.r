@@ -1,5 +1,5 @@
 #########################################################
-##### 	R >< GOOGLE SHEETS INTERACITON SCRATCHPAD	#####
+##### 	SAPP DATA ANALYSIS                        	#####
 #########################################################
 
 #install.packages('devtools')
@@ -10,8 +10,11 @@
 #install.packages("googlesheets")
 #install.packages("stringr")
 #install.packages("ReporteRs")
+#install.packages("xlsx")
 
 ### INITIAL SETUP ###
+options(java.parameters = "- Xmx1024m")
+
 rm(list=ls()) #Remove lists
 
 start_time <- Sys.time()
@@ -24,59 +27,69 @@ library(ReporteRs)
 library(ggplot2)
 library(stringr)
 library(reshape2)
+library(xlsx)
 
 ### LOAD DATA ###
 
-  # School & district name selections
-  school.names <- c("All") #!
-  
   # Main data
-  #CSV
-    #Set working directory
-      #M900
-      #wd <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-04 CWIS Automation for CW/"
+    #Excel
+      #Set working directory
+        #M900
+        #wd <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/"
+        
+        #Thinkpad
+        wd <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/"
+        setwd(wd)
       
-      #Thinkpad
-      wd <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation for MMD/1. Survey Data/"
-      setwd(wd)
-    #Read most recently modified csv file in working directory
-      survey.data.csvs <- list.files()[grepl(".csv",list.files()) & !grepl(".gsheet",list.files())]
-      current.survey.data.file <- survey.data.csvs[order(survey.data.csvs %>% file.mtime, decreasing =  TRUE)][1]
-      
-      cwis.df <- read.csv(current.survey.data.file,
-                      stringsAsFactors = TRUE,
-                      header = TRUE)
-  
+      #Read most recently modified csv file in working directory
+        survey.data.xlsx <- list.files()[grepl(".xlsx",list.files()) & !grepl(".gsheet",list.files())]
+        current.survey.file <- survey.data.xlsx[order(survey.data.xlsx %>% file.mtime, decreasing =  TRUE)][1]
+        
+        sapp.wb <- loadWorkbook(current.survey.file)
+        sapp.wb.sheetnames <- getSheets(sapp.wb) %>% names
+        
+        sapp.ls <- list()
+        
+        #i=1
+        for(i in 1:length(sapp.wb.sheetnames)){
+          sapp.df.i <- read.xlsx( file = current.survey.file,
+                                sheetName = sapp.wb.sheetnames[i],
+                                as.data.frame = TRUE,
+                                )
+          sapp.df.name.i <- paste(sapp.wb.sheetnames[i],".df",sep = "")
+          assign(sapp.df.name.i, sapp.df.i)
+        }
+        
   #Google Sheets
-  #cwis.ss <- 	gs_key("13--0r4jDrW8DgC4cBlrbwIOS7nLfHsjaLFqbk_9qjVs",verbose = TRUE)
-  #cwis.df <- 	gs_read(cwis.ss, ws = 1, range = NULL, literal = TRUE) %>% as.data.frame()
+  #sapp.ss <- 	gs_key("13--0r4jDrW8DgC4cBlrbwIOS7nLfHsjaLFqbk_9qjVs",verbose = TRUE)
+  #sapp.df <- 	gs_read(sapp.ss, ws = 1, range = NULL, literal = TRUE) %>% as.data.frame()
   
-  names(cwis.df) <- cwis.df %>% names %>% tolower
+  names(sapp.df) <- sapp.df %>% names %>% tolower
   
   # Variable helper table
-  cwis.embed.helper.ss <- gs_key("1FaBPQP8Gqwp5sI_0g793G6yjW5XNFbV8ji8N7i9oLjs",verbose = TRUE) 
-  cwis.embed.helper.df <- 	gs_read(cwis.embed.helper.ss, ws = 1, range = NULL, literal = TRUE) %>% as.data.frame()
+  sapp.embed.helper.ss <- gs_key("1FaBPQP8Gqwp5sI_0g793G6yjW5XNFbV8ji8N7i9oLjs",verbose = TRUE) 
+  sapp.embed.helper.df <- 	gs_read(sapp.embed.helper.ss, ws = 1, range = NULL, literal = TRUE) %>% as.data.frame()
 
 ########################################################################################################################################################      
 ### DATA CLEANING & PREP ###
 {
   # Remove trailing column and rows with extra labels
-    dat.startrow <- which(cwis.df[,1] %>% substr(.,1,1) == "{")+1
-    dat.remove.colnums <- which(cwis.df %>% names %>% substr(.,1,1) == "x")
+    dat.startrow <- which(sapp.df[,1] %>% substr(.,1,1) == "{")+1
+    dat.remove.colnums <- which(sapp.df %>% names %>% substr(.,1,1) == "x")
     
   # Make data frame of base variables (that require no stacking)  
-    dat.basevars.df <- cwis.df[dat.startrow:length(cwis.df[,1]),                           # all rows after row where first cell begins with "{"
-                        setdiff(1:length(names(cwis.df)),dat.remove.colnums)]              # all columns except those whose names begin with "X"
+    dat.basevars.df <- sapp.df[dat.startrow:length(sapp.df[,1]),                           # all rows after row where first cell begins with "{"
+                        setdiff(1:length(names(sapp.df)),dat.remove.colnums)]              # all columns except those whose names begin with "X"
     
-    names(dat.basevars.df) <- names(cwis.df)[setdiff(1:length(names(cwis.df)),dat.remove.colnums)]
+    names(dat.basevars.df) <- names(sapp.df)[setdiff(1:length(names(sapp.df)),dat.remove.colnums)]
   
   # Make data fram of variables to be stacked
-    dat.stackvars.df <- cwis.df[dat.startrow:length(cwis.df[,1]),                          # all rows after row where first cell begins with "{"
-                                intersect(1:length(names(cwis.df)),dat.remove.colnums) %>% # ResponseId plus all columns whose names begin with "X"
-                                c(which(tolower(names(cwis.df))=="responseid"),.)]        
+    dat.stackvars.df <- sapp.df[dat.startrow:length(sapp.df[,1]),                          # all rows after row where first cell begins with "{"
+                                intersect(1:length(names(sapp.df)),dat.remove.colnums) %>% # ResponseId plus all columns whose names begin with "X"
+                                c(which(tolower(names(sapp.df))=="responseid"),.)]        
   
   # Re-stack & collapse columns that are split up because of survey branching 
-    split.names.ls <- strsplit(names(cwis.df),"_")
+    split.names.ls <- strsplit(names(sapp.df),"_")
   
     #Variable names for questions with only one column
     base.varnames.v <-  split.names.ls %>% .[sapply(., length)==1] %>% unlist 
@@ -173,7 +186,7 @@ library(reshape2)
           match.id.f <- q.id.f
         }
         
-        vars.df$question.full[f] <- cwis.df[1,] %>% .[grep(match.id.f,names(cwis.df))] %>% as.matrix %>% as.character
+        vars.df$question.full[f] <- sapp.df[1,] %>% .[grep(match.id.f,names(sapp.df))] %>% as.matrix %>% as.character
       }
       
       #Remove repeated parts of questions
@@ -191,8 +204,8 @@ library(reshape2)
       vars.df$q.id <- vars.df$q.id %>% tolower
       
       #Add variable names from embedding tool 
-      cwis.embed.helper.df$q.id <- gsub("q","Q",cwis.embed.helper.df$q.id) %>% tolower
-      vars.df <-  left_join(vars.df, cwis.embed.helper.df[,!grepl("full",names(cwis.embed.helper.df))], by = "q.id")
+      sapp.embed.helper.df$q.id <- gsub("q","Q",sapp.embed.helper.df$q.id) %>% tolower
+      vars.df <-  left_join(vars.df, sapp.embed.helper.df[,!grepl("full",names(sapp.embed.helper.df))], by = "q.id")
       
       
     #Answer Options
@@ -604,8 +617,8 @@ library(reshape2)
     
   #Copy template file into target directory & rename with individual report name 
     if(j == 1){
-      template.file <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation for MMD/Report Template/CWIS Template.pptx"
-      target.dir <- paste("G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation for MMD/3. R script outputs/",
+      template.file <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 sapp automation for MMD/Report Template/sapp Template.pptx"
+      target.dir <- paste("G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 sapp automation for MMD/3. R script outputs/",
                           "Output_",
                           gsub(":",".",Sys.time()), sep = "")
       dir.create(target.dir)
@@ -614,7 +627,7 @@ library(reshape2)
     #file.copy(template.file,target.dir)
     target.file.j <- paste( target.dir,
                             "/",
-                            "CWIS Report_",
+                            "sapp Report_",
                             district.name.i,
                             "_",
                             school.name.i,
@@ -1737,7 +1750,7 @@ library(reshape2)
       
       
       
-  #cwis.ss %>% gs_new("Cleaned Data", input = dat.df)#, verbose = TRUE)
+  #sapp.ss %>% gs_new("Cleaned Data", input = dat.df)#, verbose = TRUE)
  
   #gs_edit_cells(dat, ws='sheetname', input=colnames(result), byrow=TRUE, anchor="A1")
   #gs_edit_cells(dat, ws='sheetname', input = result, anchor="A2", col_names=FALSE, trim=TRUE)
