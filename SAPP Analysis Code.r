@@ -27,34 +27,35 @@ library(ReporteRs)
 library(ggplot2)
 library(stringr)
 library(reshape2)
-library(xlsx)
+library(openxlsx)
 
 ### LOAD DATA ###
 
   # Main data
     #Excel
       #Set working directory
-        #M900
-        #wd <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/"
+        
+#M900
+        wd <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis"
         
         #Thinkpad
-        wd <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/"
+        #wd <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/"
+        
         setwd(wd)
       
       #Read most recently modified csv file in working directory
-        survey.data.xlsx <- list.files()[grepl(".xlsx",list.files()) & !grepl(".gsheet",list.files())]
+        survey.data.xlsx <- list.files()[grepl(".xlsx",list.files()) & !grepl("analysis",list.files()) & !grepl(".gsheet",list.files())]
         current.survey.file <- survey.data.xlsx[order(survey.data.xlsx %>% file.mtime, decreasing =  TRUE)][1]
         
         sapp.wb <- loadWorkbook(current.survey.file)
-        sapp.wb.sheetnames <- getSheets(sapp.wb) %>% names
+        sapp.wb.sheetnames <- sapp.wb$sheet_names
         
         sapp.ls <- list()
         
         #i=1
         for(i in 1:length(sapp.wb.sheetnames)){
-          sapp.df.i <- read.xlsx( file = current.survey.file,            #Read sheet into data frame
-                                sheetName = sapp.wb.sheetnames[i],
-                                as.data.frame = TRUE,
+          sapp.df.i <- read.xlsx( xlsxFile = current.survey.file,            #Read sheet into data frame
+                                sheet = sapp.wb.sheetnames[i]
                                 )
           sapp.ls[[i]] <- sapp.df.i                                     #Store data frame in list (for cleaning)
           #sapp.df.name.i <- paste(sapp.wb.sheetnames[i],".df",sep = "") #Create name for new data frame
