@@ -31,30 +31,40 @@ library(reshape2)
 library(openxlsx)
 library(chron)
 
-### LOAD DATA ###
+### LOAD & CLEAN DATA ###
 
   # Main data
     #Excel
       #Set working directory
-        
-#M900
-        wd <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis"
+        #M900
+          wd <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis"
         
         #Thinkpad
-        #wd <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/"
+          #wd <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/"
         
         setwd(wd)
       
-      #Read most recently modified csv file in working directory
+      #READ MOST RECENTLY MODIFIED EXCEL FILE INTO A WORKBOOK
         survey.data.xlsx <- list.files()[grepl(".xlsx",list.files()) & !grepl("analysis",list.files()) & !grepl(".gsheet",list.files())]
         current.survey.file <- survey.data.xlsx[order(survey.data.xlsx %>% file.mtime, decreasing =  TRUE)][1]
         
-        sapp.wb <- loadWorkbook(current.survey.file)
-        sapp.wb.sheetnames <- sapp.wb$sheet_names
+        wb <- loadWorkbook(current.survey.file)
+        wb.sheetnames <- wb$sheet_names
+        sapp.wb.sheetnames <- wb.sheetnames[!grepl("buildings|users",wb.sheetnames)]
+        
         
         sapp.ls <- list()
         
+      #IMPORT USER TABLE
+        #! right now have to add user.is.test variable manually in Excel. Could be made auto later with knowledge of which emails have to be selected for deletion
+        users.df <- read.xlsx(xlsxFile = current.survey.file,
+                              sheet = "users")
+        #users.df <- users.df[,!grepl("updated_at",names(users.df))]
         
+      #IMPORT BUILDING TABLE  
+        buildings.df <- read.xlsx(xlsxFile = current.survey.file, sheet = "buildings")
+        
+      #IMPORT SAPP DATA AND STACK INTO SINGLE DATA FRAME
         #i=1
         for(i in 1:length(sapp.wb.sheetnames)){                              #START LOOP BY SAPP/SHEET
           
@@ -91,8 +101,12 @@ library(chron)
             sapp.ls[[i]] <- sapp.df.i                                     #Store data frame in list (for cleaning)
             #sapp.df.name.i <- paste(sapp.wb.sheetnames[i],".df",sep = "") #Create name for new data frame
             #assign(sapp.df.name.i, sapp.df.i)                             #Assign name to new data frame
-            
+        
         } # END LOOP BY SAPP/SHEET
+        
+        
+        
+        
         
 ########################################################################################################################################################      
 ### DATA CLEANING & PREP ###
