@@ -59,7 +59,9 @@ library(chron)
         #! right now have to add user.is.test variable manually in Excel. Could be made auto later with knowledge of which emails have to be selected for deletion
         users.df <- read.xlsx(xlsxFile = current.survey.file,
                               sheet = "users")
-        #users.df <- users.df[,!grepl("updated_at",names(users.df))]
+        users.df <- users.df[users.df$user.is.test == 0,!grepl("user.is.test",names(users.df))]
+        users.df$tot.num.responses <- ""
+        users.df$pct.same <- ""
         
       #IMPORT BUILDING TABLE  
         buildings.df <- read.xlsx(xlsxFile = current.survey.file, sheet = "buildings")
@@ -96,7 +98,8 @@ library(chron)
             sapp.df.i$time <- substr(sapp.df.i$created_at, 12, nchar(sapp.df.i$created_at)) %>% chron(times = .)
             
             #! could add time.of.day recoding times as morning, afternoon, night, etc
-            print(c(sapp.wb.sheetnames[i],dim(sapp.df.i)))
+            #print(c(sapp.wb.sheetnames[i],dim(sapp.df.i)))
+          
           #Store results in list
             sapp.ls[[i]] <- sapp.df.i                                     #Store data frame in list (for cleaning)
             #sapp.df.name.i <- paste(sapp.wb.sheetnames[i],".df",sep = "") #Create name for new data frame
@@ -105,8 +108,45 @@ library(chron)
         } # END LOOP BY SAPP/SHEET
         
         sapp.df <- sapp.ls %>% Reduce(function(x,y) full_join(x,y, all = TRUE),.)
+        sapp.df <-  cbind(
+                      sapp.df[,!grepl(paste(sapp.wb.sheetnames,collapse = "|"),names(sapp.df))],
+                      sapp.df[grepl(paste(sapp.wb.sheetnames,collapse = "|"),names(sapp.df))]
+                    )
+       
+        sapp.ans.colnums.v <-  grep(paste(sapp.wb.sheetnames,collapse = "|"),names(sapp.df)) 
+        non.sapp.colnums.v <- c(1:length(names(sapp.df))) %>% setdiff(.,sapp.ans.cols.v)
+        non.sapp.colnames.v <- c(1:length(names(sapp.df))) %>% setdiff(.,sapp.ans.cols.v)
         
-      #CALCULATE 
+        #col.alphabetized.order <- sapp.df[grepl(paste(sapp.wb.sheetnames,collapse = "|"),names(sapp.df))] %>% names %>% order
+        #sapp.df <- sapp.df[,c(1,3,2,4,5,6,7,col.alphabetized.order + 7)]
+        #sapp.df[grepl(paste(sapp.wb.sheetnames,collapse = "|"),names(sapp.df))] <- sapp.df[grepl(paste(sapp.wb.sheetnames,collapse = "|"),names(sapp.df))] %>%
+        #                                                                              .[,col.alphabetized.order]                           
+                            
+        #c(grepl("_",names(sapp.df),order(names(sapp.df))]
+  
+        
+      #CALCULATE PERCENT ANSWERS THE SAME (& OTHER USEFUL USER STATISTICS)
+        
+        for(j in 1:dim(users.df)[1]){
+          user.email.j <- users.df$email[j]
+          sapp.responses.df.j <- sapp.df[sapp.df$email == user.email.j,]
+          
+          users.df[j,]$tot.num.responses <- dim(sapp.responses.df.j)[1]
+          
+          #print(c(j,user.email.j,dim(user.responses.df.j)[1]))
+          if((sapp.responses.df.j %>% dim(.))[1] < 3){next()}else{}
+          sapp.responses.df.j <- sapp.responses.df.j[,apply(sapp.responses.df.j,2, function (x){any(!is.na(x))})] #Filter out columns that are all NA (no measured values)
+          apply(sapp.responses.df.j,1,function(x){
+                                                    mean(x, na.rm = TRUE))
+                                                  })
+          
+          #apply(sapp.responses.df.j[,70:75],2,
+          
+          #apply(sapp.responses.df.j[,sapp.ans.cols.v],2,function(x) mean(x, na.rm = TRUE))  
+          
+          
+          
+        }
         
       #EXPORT FINAL AS EXCEL
         #Create unique folder for output
