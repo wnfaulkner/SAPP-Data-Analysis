@@ -61,7 +61,7 @@ library(chron)
                               sheet = "users")
         users.df <- users.df[users.df$user.is.test == 0,!grepl("user.is.test",names(users.df))]
         users.df$tot.num.responses <- ""
-        users.df$pct.same <- ""
+        users.df$pct.dif <- ""
         
       #IMPORT BUILDING TABLE  
         buildings.df <- read.xlsx(xlsxFile = current.survey.file, sheet = "buildings")
@@ -149,18 +149,18 @@ library(chron)
             pct.dif.responses.ls[[k]] <- length(dif.responses.v.k[dif.responses.v.k != 0])/length(dif.responses.v.k) #Calculation of statistic: percentage of answers which were different from answer that came before it in time by that user
           } # END OF LOOP BY RESPONSE VARIABLE
         
-          users.df$pct.same[j] <- pct.dif.responses.ls %>% unlist %>% mean(.)*100 #Calculation of final statistic: mean of percentage of answers that were different across all variables that the user responded to
+          users.df$pct.dif[j] <- pct.dif.responses.ls %>% unlist %>% mean(.)*100 #Calculation of final statistic: mean of percentage of answers that were different across all variables that the user responded to
         
         } #END OF LOOP BY USER
         
         users.df$tot.num.responses <- users.df$tot.num.responses %>% as.numeric(.)
-        users.df$pct.same <- users.df$pct.same %>% as.numeric
+        users.df$pct.dif <- users.df$pct.dif %>% as.numeric
         
-        users.df$pct.same %>% summary
+        users.df$pct.dif %>% summary
         
       #EXPORT FINAL AS EXCEL
         #Create unique folder for output
-          output.dir <- paste(wd,"/R script outputs/",
+          output.dir <- paste(wd,
                               "Output_",
                               gsub(":",".",Sys.time()), sep = "")
           dir.create(output.dir, recursive = TRUE)
