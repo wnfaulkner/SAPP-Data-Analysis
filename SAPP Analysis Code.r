@@ -127,7 +127,8 @@ library(chron)
         
       #CALCULATE PERCENT ANSWERS THE SAME (& OTHER USEFUL USER STATISTICS)
         
-        for(j in 1:dim(users.df)[1]){
+        for(j in 1:dim(users.df)[1]){   # START OF LOOP BY USER
+          
           user.email.j <- users.df$email[j]
           sapp.responses.df.j <- sapp.df[sapp.df$email == user.email.j,]
           
@@ -141,20 +142,21 @@ library(chron)
           
           pct.dif.responses.ls <- list()
           
-          for(k in 1:length(response.colnames.v.j)){
+          for(k in 1:length(response.colnames.v.j)){  # START OF LOOP BY RESPONSE VARIABLE
             responses.v.k <- sapp.responses.df.j[,names(sapp.responses.df.j) == response.colnames.v.j[k]]
             responses.v.k <- responses.v.k[!is.na(responses.v.k)]
             dif.responses.v.k <- (responses.v.k[2:length(responses.v.k)] - responses.v.k[1:(length(responses.v.k)-1)])
-            pct.dif.responses.ls[[k]] <- length(dif.responses.v.k[dif.responses.v.k != 0])/length(dif.responses.v.k)
-          }
-          users.df$pct.same[j] <- pct.dif.responses.ls %>% unlist %>% mean()
+            pct.dif.responses.ls[[k]] <- length(dif.responses.v.k[dif.responses.v.k != 0])/length(dif.responses.v.k) #Calculation of statistic: percentage of answers which were different from answer that came before it in time by that user
+          } # END OF LOOP BY RESPONSE VARIABLE
         
-          #pp.responses.df.j[,sapp.ans.cols.v],2,function(x) mean(x, na.rm = TRUE))  
-          
-        }
+          users.df$pct.same[j] <- pct.dif.responses.ls %>% unlist %>% mean(.)*100 #Calculation of final statistic: mean of percentage of answers that were different across all variables that the user responded to
+        
+        } #END OF LOOP BY USER
         
         users.df$tot.num.responses <- users.df$tot.num.responses %>% as.numeric(.)
         users.df$pct.same <- users.df$pct.same %>% as.numeric
+        
+        users.df$pct.same %>% summary
         
       #EXPORT FINAL AS EXCEL
         #Create unique folder for output
@@ -171,6 +173,8 @@ library(chron)
                                     gsub(":","-",Sys.time()),
                                     ".xlsx",
                                     sep = "")
+          Sys.setenv("R_ZIPCMD" = "C:/Rtools/bin/zip.exe") #Avoids error about zipping command using openxlsx (https://github.com/awalker89/openxlsx/issues/111)
+          
           write.xlsx(sapp.datasets, file = output.file.name)
           
           setwd(wd)
