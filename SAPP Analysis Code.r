@@ -114,8 +114,8 @@ library(chron)
                     )
        
         sapp.ans.colnums.v <-  grep(paste(sapp.wb.sheetnames,collapse = "|"),names(sapp.df)) 
-        non.sapp.colnums.v <- c(1:length(names(sapp.df))) %>% setdiff(.,sapp.ans.cols.v)
-        non.sapp.colnames.v <- c(1:length(names(sapp.df))) %>% setdiff(.,sapp.ans.cols.v)
+        non.sapp.colnums.v <- c(1:length(names(sapp.df))) %>% setdiff(.,sapp.ans.colnums.v)
+        non.sapp.colnames.v <- names(sapp.df)[c(1:length(names(sapp.df))) %>% setdiff(.,sapp.ans.colnums.v)]
         
         #col.alphabetized.order <- sapp.df[grepl(paste(sapp.wb.sheetnames,collapse = "|"),names(sapp.df))] %>% names %>% order
         #sapp.df <- sapp.df[,c(1,3,2,4,5,6,7,col.alphabetized.order + 7)]
@@ -133,20 +133,28 @@ library(chron)
           
           users.df[j,]$tot.num.responses <- dim(sapp.responses.df.j)[1]
           
-          #print(c(j,user.email.j,dim(user.responses.df.j)[1]))
           if((sapp.responses.df.j %>% dim(.))[1] < 3){next()}else{}
-          sapp.responses.df.j <- sapp.responses.df.j[,apply(sapp.responses.df.j,2, function (x){any(!is.na(x))})] #Filter out columns that are all NA (no measured values)
-          apply(sapp.responses.df.j,1,function(x){
-                                                    mean(x, na.rm = TRUE))
-                                                  })
           
-          #apply(sapp.responses.df.j[,70:75],2,
+          sapp.responses.df.j <- sapp.responses.df.j[order(sapp.responses.df.j$created_at),apply(sapp.responses.df.j,2, function (x){any(!is.na(x))})] #Filter out columns that are all NA (no measured values)
           
-          #apply(sapp.responses.df.j[,sapp.ans.cols.v],2,function(x) mean(x, na.rm = TRUE))  
+          response.colnames.v.j <- setdiff(names(sapp.responses.df.j),non.sapp.colnames.v) %>% .[!grepl("_id|_at|Overall.Sum",.)]
           
+          pct.dif.responses.ls <- list()
           
+          for(k in 1:length(response.colnames.v.j)){
+            responses.v.k <- sapp.responses.df.j[,names(sapp.responses.df.j) == response.colnames.v.j[k]]
+            responses.v.k <- responses.v.k[!is.na(responses.v.k)]
+            dif.responses.v.k <- (responses.v.k[2:length(responses.v.k)] - responses.v.k[1:(length(responses.v.k)-1)])
+            pct.dif.responses.ls[[k]] <- length(dif.responses.v.k[dif.responses.v.k != 0])/length(dif.responses.v.k)
+          }
+          users.df$pct.same[j] <- pct.dif.responses.ls %>% unlist %>% mean()
+        
+          #pp.responses.df.j[,sapp.ans.cols.v],2,function(x) mean(x, na.rm = TRUE))  
           
         }
+        
+        users.df$tot.num.responses <- users.df$tot.num.responses %>% as.numeric(.)
+        users.df$pct.same <- users.df$pct.same %>% as.numeric
         
       #EXPORT FINAL AS EXCEL
         #Create unique folder for output
@@ -166,4 +174,24 @@ library(chron)
           write.xlsx(sapp.datasets, file = output.file.name)
           
           setwd(wd)
-        
+          
+          
+          
+          
+          
+          
+          
+          
+          
+###############################################################################################################################################################
+# EXTRA CODE
+          #print(c(j,user.email.j,dim(user.responses.df.j)[1]))
+          
+          #sapp.responses.df.j <- sapp.responses.df.j[,setdiff(names(sapp.responses.df.j),non.sapp.colnames.v) %>% .[!grepl("_id",.)]]
+          #apply(sapp.responses.df.j,1,function(x){mean(x, na.rm = TRUE)})
+          
+          #apply(,2,function(x){mean(x, na.rm = TRUE)})
+          
+          #apply(sapp.responses.df.j[,70:75],2,
+          
+          #apply(sa
