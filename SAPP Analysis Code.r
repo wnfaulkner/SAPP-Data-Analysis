@@ -38,7 +38,7 @@ library(chron)
       #Set working directory
         #M900
           wd <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis"
-        
+
         #Thinkpad
           #wd <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/"
         
@@ -58,30 +58,57 @@ library(chron)
       #IMPORT USER TABLE
         #! right now have to add user.is.test variable manually in Excel. Could be made auto later with knowledge of which emails have to be selected for deletion
         users.df <- read.xlsx(xlsxFile = current.survey.file,
-                              sheet = "users")
-        users.df <- users.df[users.df$user.is.test == 0,!grepl("user.is.test",names(users.df))]
+                              sheet = wb.sheetnames[grepl("users",wb.sheetnames)]) 
+        
+        #Restrict Dataset
+          #For MMD districts only
+            mmd.districts.201718 <- c("Cameron R-I","Mound City R-II","Linn Co. R-I","Sheldon R-VIII","Green Forest R-II","Malden R-I",
+                                      "Strain-Japan R-XVI","Hayti R-II","Belton 124","University Academy","Sedalia 200","Meramec Valley R-III","Rolla 31",
+                                      "Farmington R-VII","Poplar Bluff R-I","Willow Springs R-IV","McDonald Co. R-I","Raytown C-2","Ft. Zumwalt R-II",
+                                      "Pattonville R-III")
+            users.df$mmd.2017_18 <- users.df$district %in% mmd.districts.201718
+          
+          #For test users  
+            test.user.emails <- c("test.user.emails <- admin@test.com","alex8022@gmail.com","angela.riner-mooney@dese.mo.gov","arden.day@nau.edu","barb.gilpin@dese.mo.gov",
+            "cadre3@missouri.pd.org","carla.williams@raytownschools.org","dana.desmond@dese.mo.gov","dev@test.com","district@test.com","jeff.maui4me@gmail.com",
+            "jlfreel@hotmail.com","judy.wartick@moed-sail.org","judy.wartick@moedu-sail.org","kohzadi@ucmo.edu","leader@test.com","pcarte@truman.edu","ronda.jenson@moedu-sail.org",
+            "ronda@belton.net","ronda@poplarbluff.net","rondadistrict@dev.text","rondaeugenebleader@dev.test","rondalakeroadbleader@dev.test","rondaleader@test.dev",
+            "rondamcdonaldcohighbleader@dev.test","rondaoakgrovebleader@test.dev","rondaonealbleader@test.dev","rondapbbernieeleader@dev.test","rpdc@test.com",
+            "rpdc1@missouripd.org","rpdc2@missouripd.org","rpdc3@missouripd.org","rpdc4@missouripd.org","rpdc5@missouripd.org","rpdc6@missouripd.org","rpdc7@missouripd.org",
+            "rpdc8@missouripd.org","pdc9@missouripd.org","sapp_admin@test.com","sarahmartentest@dev.test","teacher@test.com","teacher3@test.com","teacher4@test.com",
+            "testeral@sedalia200.org","thea.scott@dese.mo.gov")
+            
+            users.df$test.user <- users.df$email %in% test.user.emails 
+        
+        #New variable placeholders
         users.df$tot.num.responses <- ""
         users.df$pct.dif <- ""
         
       #IMPORT BUILDING TABLE  
-        buildings.df <- read.xlsx(xlsxFile = current.survey.file, sheet = "buildings")
+        buildings.df <- read.xlsx(xlsxFile = current.survey.file, sheet = wb.sheetnames[grepl("building",wb.sheetnames)])
         
       #IMPORT SAPP DATA AND STACK INTO SINGLE DATA FRAME
-        #i=1
-        for(i in 1:length(sapp.wb.sheetnames)){                              #START LOOP BY SAPP/SHEET
+        i=1
+        #for(i in 1:length(sapp.wb.sheetnames)){                              #START LOOP BY SAPP/SHEET
           
           sapp.df.i <- read.xlsx( xlsxFile = current.survey.file,            #Read sheet into data frame
                                 sheet = sapp.wb.sheetnames[i]
                                 )
-          sapp.df.i <- sapp.df.i[!is.na(sapp.df.i$email),!grepl("updated_at", names(sapp.df.i))]   #Remove rows with no user email and the 'updated_at' variable
-          sapp.df.i <- sapp.df.i[,c(names(sapp.df.i)[grepl("email|created_at",names(sapp.df.i))],
-                                    names(sapp.df.i)[!grepl("email|created_at",names(sapp.df.i))]
-                                )]
+          #sapp.df.i <- sapp.df.i[!is.na(sapp.df.i$email),!grepl("updated_at", names(sapp.df.i))]   #Remove rows with no user email and the 'updated_at' variable
+          #sapp.df.i <- sapp.df.i[,c(names(sapp.df.i)[grepl("email|created_at",names(sapp.df.i))],
+          #                         names(sapp.df.i)[!grepl("email|created_at",names(sapp.df.i))]
+          #                      )]
         
           #Append worksheet name to variable names - Response ID and all sheet questions (excludes 'email' and 'created_at')
-            sapp.df.i$id <- paste(sapp.wb.sheetnames[i], sapp.df.i$id, sep = "_")
+            sapp.profile.names.v <- c("acl","cdt","cfa","es","feedback","lead","metacog","rt","str")
+            sapp.df.id <- sapp.profile.names.v[!is.na(pmatch(sapp.profile.names.v, sapp.wb.sheetnames[i]))]
+            sapp.idvar <- names(sapp.df.i)[grep("id",names(sapp.df.i))] %>% .[!grepl("_",.)] 
+            names(sapp.df.i)[names(sapp.df.i) == sapp.idvar] <- paste(sapp.df.id,"_",names(sapp.df.i)[grep("id",names(sapp.df.i))] %>% .[!grepl("_",.)], sep = "")
+            
+            sapp.df.i$id <- sapp.df.id
+            #sapp.df.i$id <- paste(sapp.wb.sheetnames[i], sapp.df.i$id, sep = "_")
             names(sapp.df.i) <- c(
-                                    names(sapp.df.i)[grepl("email|created_at",names(sapp.df.i))],
+                                    names(sapp.df.i)[grepl("id|created_at",names(sapp.df.i))],
                                     paste(sapp.wb.sheetnames[i], 
                                           names(sapp.df.i)[!grepl("email|created_at",names(sapp.df.i))], 
                                           sep = "_")
