@@ -88,49 +88,43 @@ library(chron)
         buildings.df <- read.xlsx(xlsxFile = current.survey.file, sheet = wb.sheetnames[grepl("building",wb.sheetnames)])
         
       #IMPORT SAPP DATA AND STACK INTO SINGLE DATA FRAME
+        
+        sapp.profile.names.v <- c("acl","cdt","cfa","es","feedback","lead","metacog","rt","str")
+        
+        
         i=1
-        #for(i in 1:length(sapp.wb.sheetnames)){                              #START LOOP BY SAPP/SHEET
+        for(i in 1:length(sapp.wb.sheetnames)){                              #START LOOP BY SAPP/SHEET
+          sapp.name.i <- sapp.profile.names.v[!is.na(pmatch(sapp.profile.names.v, sapp.wb.sheetnames[i]))]
+          if(length(sapp.name.i) < 1){next()}else{}
           
-          sapp.df.i <- read.xlsx( xlsxFile = current.survey.file,            #Read sheet into data frame
+          #Load sheet into data frame
+            sapp.df.i <- read.xlsx( xlsxFile = current.survey.file,            #Read sheet into data frame
                                 sheet = sapp.wb.sheetnames[i]
                                 )
-          #sapp.df.i <- sapp.df.i[!is.na(sapp.df.i$email),!grepl("updated_at", names(sapp.df.i))]   #Remove rows with no user email and the 'updated_at' variable
-          #sapp.df.i <- sapp.df.i[,c(names(sapp.df.i)[grepl("email|created_at",names(sapp.df.i))],
-          #                         names(sapp.df.i)[!grepl("email|created_at",names(sapp.df.i))]
-          #                      )]
-        
+         
           #Append worksheet name to variable names - Response ID and all sheet questions (excludes 'email' and 'created_at')
-            sapp.profile.names.v <- c("acl","cdt","cfa","es","feedback","lead","metacog","rt","str")
-            sapp.df.id <- sapp.profile.names.v[!is.na(pmatch(sapp.profile.names.v, sapp.wb.sheetnames[i]))]
+        
             sapp.idvar <- names(sapp.df.i)[grep("id",names(sapp.df.i))] %>% .[!grepl("_",.)] 
-            names(sapp.df.i)[names(sapp.df.i) == sapp.idvar] <- paste(sapp.df.id,"_",names(sapp.df.i)[grep("id",names(sapp.df.i))] %>% .[!grepl("_",.)], sep = "")
-            
-            sapp.df.i$id <- sapp.df.id
-            #sapp.df.i$id <- paste(sapp.wb.sheetnames[i], sapp.df.i$id, sep = "_")
-            names(sapp.df.i) <- c(
-                                    names(sapp.df.i)[grepl("id|created_at",names(sapp.df.i))],
-                                    paste(sapp.wb.sheetnames[i], 
-                                          names(sapp.df.i)[!grepl("email|created_at",names(sapp.df.i))], 
-                                          sep = "_")
-                                  )
-            
-          #Add column for SAPP Sheet Name
-            sapp.df.i$sapp <- sapp.wb.sheetnames[i]
+            names(sapp.df.i)[names(sapp.df.i) == sapp.idvar] <- paste(sapp.name.i,"_",names(sapp.df.i)[grep("id",names(sapp.df.i))] %>% .[!grepl("_",.)], sep = "") #Append SAPP profile name to 'id' variable
+            names(sapp.df.i)[grepl("q",names(sapp.df.i))] <- names(sapp.df.i)[grepl("q",names(sapp.df.i))] %>% paste(sapp.name.i,"_",.,sep="")
           
           #Create Date & Time Variables (formed off of 'created_at' variable and dropped 'updated at' variable because was the same as 'created_at in all but 2 cases - only checked 'str' sheet)
-            sapp.df.i$date <- substr(sapp.df.i$created_at, 1, 10) %>% as.Date()
-            sapp.df.i$year <- substr(sapp.df.i$created_at, 1, 10) %>% as.Date() %>% format(., "%Y")
-            sapp.df.i$month <- substr(sapp.df.i$created_at, 1, 10) %>% as.Date() %>% format(., "%m")
-            sapp.df.i$day <- substr(sapp.df.i$created_at, 1, 10) %>% as.Date() %>% format(., "%d")
-            sapp.df.i$time <- substr(sapp.df.i$created_at, 12, nchar(sapp.df.i$created_at)) %>% chron(times = .)
-            
-            #! could add time.of.day recoding times as morning, afternoon, night, etc
-            #print(c(sapp.wb.sheetnames[i],dim(sapp.df.i)))
+            sapp.df.i$created_datetime <- convertToDateTime(sapp.df.i$created_at)
+            sapp.df.i$created_year <- sapp.df.i$created_datetime %>% format(., "%Y")
+            sapp.df.i$month <-  sapp.df.i$created_datetime %>% format(., "%m")
+            sapp.df.i$day <-  sapp.df.i$created_datetime %>% format(., "%d")
+            sapp.df.i$time <- substr(sapp.df.i$created_datetime, 12, nchar(sapp.df.i$created_datetime %>% as.character)) %>% chron(times = .)
           
+          #Add column for SAPP Sheet Name
+            sapp.df.i$sapp <- sapp.name.i
+            
+          #Re-order columns
+            sapp.df.i <- sapp.df.i[, c(which(!grepl("q",names(sapp.df.i))), which(grepl("q",names(sapp.df.i))))]
+
           #Store results in list
+            sapp.df.i$created_at <- sapp.df.i$created_at %>% as.character #prevents error when joining/stacking after loop
+            sapp.df.i$updated_at <- sapp.df.i$updated_at %>% as.character #prevents error when joining/stacking after loop
             sapp.ls[[i]] <- sapp.df.i                                     #Store data frame in list (for cleaning)
-            #sapp.df.name.i <- paste(sapp.wb.sheetnames[i],".df",sep = "") #Create name for new data frame
-            #assign(sapp.df.name.i, sapp.df.i)                             #Assign name to new data frame
         
         } # END LOOP BY SAPP/SHEET
         
