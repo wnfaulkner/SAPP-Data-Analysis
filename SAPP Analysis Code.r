@@ -128,32 +128,28 @@ library(chron)
         
         } # END LOOP BY SAPP/SHEET
         
-        sapp.df <- sapp.ls %>% Reduce(function(x,y) full_join(x,y, all = TRUE),.)
+        sapp.df <- sapp.ls %>% Reduce(function(x,y) full_join(x,y, all = TRUE),.) #Stack list outputs from loop
+        
+        sapp.df$response_id <- 1:dim(sapp.df)[1] #Create an overall id unique for each response
+        
         sapp.df <-  cbind(
                       sapp.df[,!grepl(paste(sapp.wb.sheetnames,collapse = "|"),names(sapp.df))],
                       sapp.df[grepl(paste(sapp.wb.sheetnames,collapse = "|"),names(sapp.df))]
                     )
        
-        sapp.ans.colnums.v <-  grep(paste(sapp.wb.sheetnames,collapse = "|"),names(sapp.df)) 
+        sapp.ans.colnums.v <-  grep(paste(sapp.profile.names.v,collapse = "|"),names(sapp.df)) 
         non.sapp.colnums.v <- c(1:length(names(sapp.df))) %>% setdiff(.,sapp.ans.colnums.v)
         non.sapp.colnames.v <- names(sapp.df)[c(1:length(names(sapp.df))) %>% setdiff(.,sapp.ans.colnums.v)]
         
-        #col.alphabetized.order <- sapp.df[grepl(paste(sapp.wb.sheetnames,collapse = "|"),names(sapp.df))] %>% names %>% order
-        #sapp.df <- sapp.df[,c(1,3,2,4,5,6,7,col.alphabetized.order + 7)]
-        #sapp.df[grepl(paste(sapp.wb.sheetnames,collapse = "|"),names(sapp.df))] <- sapp.df[grepl(paste(sapp.wb.sheetnames,collapse = "|"),names(sapp.df))] %>%
-        #                                                                              .[,col.alphabetized.order]                           
-                            
-        #c(grepl("_",names(sapp.df),order(names(sapp.df))]
-  
-        
+      
       #CALCULATE PERCENT ANSWERS THE SAME (& OTHER USEFUL USER STATISTICS)
         
         for(j in 1:dim(users.df)[1]){   # START OF LOOP BY USER
           
-          user.email.j <- users.df$email[j]
-          sapp.responses.df.j <- sapp.df[sapp.df$email == user.email.j,]
+          user_id.j <- users.df$user_id[j]
+          sapp.responses.df.j <- sapp.df[sapp.df$user_id == user_id.j,]
           
-          users.df[j,]$tot.num.responses <- dim(sapp.responses.df.j)[1]
+          users.df$tot.num.responses[j] <- dim(sapp.responses.df.j)[1]
           
           if((sapp.responses.df.j %>% dim(.))[1] < 3){next()}else{}
           
@@ -182,7 +178,7 @@ library(chron)
       #EXPORT FINAL AS EXCEL
         #Create unique folder for output
           output.dir <- paste(wd,
-                              "Output_",
+                              "/Output_",
                               gsub(":",".",Sys.time()), sep = "")
           dir.create(output.dir, recursive = TRUE)
         
@@ -201,22 +197,4 @@ library(chron)
           setwd(wd)
           
           
-          
-          
-          
-          
-          
-          
-          
-###############################################################################################################################################################
-# EXTRA CODE
-          #print(c(j,user.email.j,dim(user.responses.df.j)[1]))
-          
-          #sapp.responses.df.j <- sapp.responses.df.j[,setdiff(names(sapp.responses.df.j),non.sapp.colnames.v) %>% .[!grepl("_id",.)]]
-          #apply(sapp.responses.df.j,1,function(x){mean(x, na.rm = TRUE)})
-          
-          #apply(,2,function(x){mean(x, na.rm = TRUE)})
-          
-          #apply(sapp.responses.df.j[,70:75],2,
-          
-          #apply(sa
+
