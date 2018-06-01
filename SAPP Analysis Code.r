@@ -56,7 +56,6 @@ library(chron)
         sapp.ls <- list()
         
       #IMPORT USER TABLE
-        #! right now have to add user.is.test variable manually in Excel. Could be made auto later with knowledge of which emails have to be selected for deletion
         users.df <- read.xlsx(xlsxFile = current.survey.file,
                               sheet = wb.sheetnames[grepl("users",wb.sheetnames)]) 
         
