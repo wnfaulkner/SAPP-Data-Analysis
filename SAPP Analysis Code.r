@@ -165,17 +165,35 @@ library(chron)
          
           users.df$tot.num.responses[j] <- dim(sapp.responses.df.j)[1]
           
-          if((sapp.responses.df.j %>% dim(.))[1] < 3){next()}else{}
-          
           sapp.responses.df.j <- sapp.responses.df.j[order(sapp.responses.df.j$created_at),apply(sapp.responses.df.j,2, function (x){any(!is.na(x))})] #Filter out columns that are all NA (no measured values)
           
+          if(dim(sapp.responses.df.j)[1] < 3){next()}else{}
+          
           response.colnames.v.j <- setdiff(names(sapp.responses.df.j),non.sapp.colnames.v) %>% .[!grepl("_id|_at|Overall.Sum",.)]
+          
+          # Producing graph of duplicated responses and time between them
+          sapp.responses.duplicated.df.j <- sapp.responses.df.j[,names(sapp.responses.df.j) %in% response.colnames.v.j] %>%  # Filter out non-unique responses
+                                          duplicated(.) %>% 
+                                          sapp.responses.df.j[.,]
+          
+          # Calculating pct.dif variable to guage if users answering differently each time
+          sapp.responses.unique.df.j <- sapp.responses.df.j[,names(sapp.responses.df.j) %in% response.colnames.v.j] %>%  # Filter out non-unique responses
+                                          duplicated(.) %>% 
+                                          `!` %>% 
+                                          sapp.responses.df.j[.,]
+          
+          sapp.table.df.j <- sapp.responses.unique.df.j$sapp %>% table %>% as.data.frame # Table of number of uniqe responses by SAPP
+          sapp.compare.v.j <- sapp.table.df.j[,1] %>% .[sapp.table.df.j[,2] > 2] %>% as.character(.) # SAPP names where user responded more than twice to that profile
+          
+          if(length(sapp.compare.v.j) < 1){next()}else{} # Skip pct.dif calculation if user responded no SAPPs in non-duplicated way more than twice
+          
+          sapp.responses.compare.df.j <- sapp.responses.unique.df.j[sapp.responses.unique.df.j$sapp %in% sapp.compare.v.j,] # Final user data frame with only non-unique rows for 
           
           pct.dif.responses.ls <- list()
           
           for(k in 1:length(response.colnames.v.j)){  # START OF LOOP BY RESPONSE VARIABLE
             
-            responses.v.k <- sapp.responses.df.j[,names(sapp.responses.df.j) == response.colnames.v.j[k]]
+            responses.v.k <- sapp.responses.unique.df.j[,names(sapp.responses.unique.df.j) == response.colnames.v.j[k]]
             responses.v.k <- responses.v.k[!is.na(responses.v.k)]
             dif.responses.v.k <- (responses.v.k[2:length(responses.v.k)] - responses.v.k[1:(length(responses.v.k)-1)])
             pct.dif.responses.ls[[k]] <- length(dif.responses.v.k[dif.responses.v.k != 0])/length(dif.responses.v.k) #Calculation of statistic: percentage of answers which were different from answer that came before it in time by that user
@@ -183,7 +201,9 @@ library(chron)
           } # END OF LOOP BY RESPONSE VARIABLE
         
           users.df$pct.dif[j] <- pct.dif.responses.ls %>% unlist %>% mean(.)*100 #Calculation of final statistic: mean of percentage of answers that were different across all variables that the user responded to
-          print(c(j,user_id.j,dim(sapp.responses.df.j)[1], users.df$pct.dif[j]))
+          
+          #print(c(j,length(sapp.compare.v.j),users.df$pct.dif[j]))
+          
           setTxtProgressBar(progress.bar.j, 100*j/maxrow)
           
         } #END OF LOOP BY USER
