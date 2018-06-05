@@ -37,14 +37,18 @@ library(chron)
     #Excel
       #Set working directory
         #M900
-          wd <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis"
-
+          working.dir <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis"
+          
         #Thinkpad
-          #wd <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/"
+          #working.dir <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/"
         
-        setwd(wd)
+          
+        source.dir <- paste(working.dir,"/Source Data/",sep="")
+        
+        setwd(source.dir)
       
       #READ MOST RECENTLY MODIFIED EXCEL FILE INTO A WORKBOOK
+        
         survey.data.xlsx <- list.files()[grepl(".xlsx",list.files()) & !grepl("analysis",list.files()) & !grepl(".gsheet",list.files())]
         current.survey.file <- survey.data.xlsx[order(survey.data.xlsx %>% file.mtime, decreasing =  TRUE)][1]
         
@@ -85,14 +89,20 @@ library(chron)
         
       #IMPORT BUILDING TABLE  
         buildings.df <- read.xlsx(xlsxFile = current.survey.file, sheet = wb.sheetnames[grepl("building",wb.sheetnames)])
+        buildings.df$building_code <- paste(buildings.df$cd_code,"_",buildings.df$school_codes,sep="")
+        buildings.df <- buildings.df[,!grepl("cd_code|school_codes",names(buildings.df))] %>%
+                          .[,c(length(names(.)),1:(length(names(.))-1))]
         
       #IMPORT SAPP DATA AND STACK INTO SINGLE DATA FRAME
         
         sapp.profile.names.v <- c("acl","cdt","cfa","es","feedback","lead","metacog","rt","str")
         
+        progress.bar.i <- txtProgressBar(min = 0, max = 100, style = 3)
+        maxrow <- length(sapp.wb.sheetnames)
         
-        i=1
+        #i=1
         for(i in 1:length(sapp.wb.sheetnames)){                              #START LOOP BY SAPP/SHEET
+          
           sapp.name.i <- sapp.profile.names.v[!is.na(pmatch(sapp.profile.names.v, sapp.wb.sheetnames[i]))]
           if(length(sapp.name.i) < 1){next()}else{}
           
@@ -125,6 +135,8 @@ library(chron)
             sapp.df.i$updated_at <- sapp.df.i$updated_at %>% as.character #prevents error when joining/stacking after loop
             sapp.ls[[i]] <- sapp.df.i                                     #Store data frame in list (for cleaning)
         
+          setTxtProgressBar(progress.bar.i, 100*i/maxrow)
+            
         } # END LOOP BY SAPP/SHEET
         
         sapp.df <- sapp.ls %>% Reduce(function(x,y) full_join(x,y, all = TRUE),.) #Stack list outputs from loop
@@ -143,11 +155,14 @@ library(chron)
       
       #CALCULATE PERCENT ANSWERS THE SAME (& OTHER USEFUL USER STATISTICS)
         
+        progress.bar.j <- txtProgressBar(min = 0, max = 100, style = 3)
+        maxrow <- dim(users.df)[1]
+        
         for(j in 1:dim(users.df)[1]){   # START OF LOOP BY USER
           
           user_id.j <- users.df$user_id[j]
           sapp.responses.df.j <- sapp.df[sapp.df$user_id == user_id.j,]
-          
+         
           users.df$tot.num.responses[j] <- dim(sapp.responses.df.j)[1]
           
           if((sapp.responses.df.j %>% dim(.))[1] < 3){next()}else{}
@@ -159,14 +174,18 @@ library(chron)
           pct.dif.responses.ls <- list()
           
           for(k in 1:length(response.colnames.v.j)){  # START OF LOOP BY RESPONSE VARIABLE
+            
             responses.v.k <- sapp.responses.df.j[,names(sapp.responses.df.j) == response.colnames.v.j[k]]
             responses.v.k <- responses.v.k[!is.na(responses.v.k)]
             dif.responses.v.k <- (responses.v.k[2:length(responses.v.k)] - responses.v.k[1:(length(responses.v.k)-1)])
             pct.dif.responses.ls[[k]] <- length(dif.responses.v.k[dif.responses.v.k != 0])/length(dif.responses.v.k) #Calculation of statistic: percentage of answers which were different from answer that came before it in time by that user
+          
           } # END OF LOOP BY RESPONSE VARIABLE
         
           users.df$pct.dif[j] <- pct.dif.responses.ls %>% unlist %>% mean(.)*100 #Calculation of final statistic: mean of percentage of answers that were different across all variables that the user responded to
-        
+          print(c(j,user_id.j,dim(sapp.responses.df.j)[1], users.df$pct.dif[j]))
+          setTxtProgressBar(progress.bar.j, 100*j/maxrow)
+          
         } #END OF LOOP BY USER
         
         users.df$tot.num.responses <- users.df$tot.num.responses %>% as.numeric(.)
@@ -176,9 +195,9 @@ library(chron)
         
       #EXPORT FINAL AS EXCEL
         #Create unique folder for output
-          output.dir <- paste(wd,
-                              "/Output_",
-                              gsub(":",".",Sys.time()), sep = "")
+          output.dir <- paste(working.dir,
+                            "/Output_",
+                            gsub(":",".",Sys.time()), sep = "")
           dir.create(output.dir, recursive = TRUE)
         
         #Write .xlsx file with three sheets
@@ -193,7 +212,7 @@ library(chron)
           
           write.xlsx(sapp.datasets, file = output.file.name)
           
-          setwd(wd)
+          setwd(working.dir)
           
           
 
