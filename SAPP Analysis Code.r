@@ -159,6 +159,8 @@ library(chron)
       
       #CALCULATE PERCENT ANSWERS THE SAME (& OTHER USEFUL USER STATISTICS)
         
+        sapp.responses.duplicated.ls <- list()
+        
         progress.bar.j <- txtProgressBar(min = 0, max = 100, style = 3)
         maxrow <- dim(users.df)[1]
         
@@ -179,8 +181,20 @@ library(chron)
             sapp.responses.duplicated.df.j <- sapp.responses.df.j[,names(sapp.responses.df.j) %in% response.colnames.v.j] %>%  # Filter out non-unique responses
                                             duplicated(.) %>% 
                                             sapp.responses.df.j[.,]
-            
-            
+            if(dim(sapp.responses.duplicated.df.j)[1] < 1){}else{
+              sapp.responses.duplicated.df.j <- sapp.responses.duplicated.df.j[with(sapp.responses.duplicated.df.j, order(sapp, created_datetime)),]
+              
+              sapp.responses.duplicated.df.j$duplicated_timedif <- c(NA,
+                                                                     difftime(sapp.responses.duplicated.df.j$created_datetime[2:length(sapp.responses.duplicated.df.j$created_datetime)],
+                                                                              sapp.responses.duplicated.df.j$created_datetime[1:length(sapp.responses.duplicated.df.j$created_datetime)-1],
+                                                                              units = "hours")
+                                                                    )
+              sapp.responses.duplicated.df.j$same_sapp <- c(NA,sapp.responses.duplicated.df.j$sapp[2:length(sapp.responses.duplicated.df.j$sapp)] == sapp.responses.duplicated.df.j$sapp[1:length(sapp.responses.duplicated.df.j$sapp)-1])
+              sapp.responses.duplicated.df.j$duplicated_timedif[sapp.responses.duplicated.df.j$same_sapp == FALSE] <- NA
+              sapp.responses.duplicated.ls[[j]] <- sapp.responses.duplicated.df.j[,names(sapp.responses.duplicated.df.j) %in% c("response_id","duplicated_timedif")]
+              
+              #sapp.df <- full_join(sapp.df, sapp.responses.duplicated.df.j, by = "response_id")
+            }
             
           # Calculating pct.dif variable to guage if users answering differently each time
             sapp.responses.unique.df.j <- sapp.responses.df.j[,names(sapp.responses.df.j) %in% response.colnames.v.j] %>%  # Filter out non-unique responses
