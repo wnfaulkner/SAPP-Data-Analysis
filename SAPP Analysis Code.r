@@ -82,14 +82,19 @@ library(chron)
         users.df$test.user <- users.df$email %in% test.user.emails 
     
     #New variable placeholders
-    users.df$tot.num.responses <- ""
-    users.df$pct.dif <- ""
+      users.df$tot.num.responses <- ""
+      users.df$pct.dif <- ""
+    
+    #Name change for less confusion
+      names(users.df)[names(users.df) == "school_id"] <- "building_id"
     
   #IMPORT BUILDING TABLE  
     buildings.df <- read.xlsx(xlsxFile = current.survey.file, sheet = wb.sheetnames[grepl("building",wb.sheetnames)])
     buildings.df$building_code <- paste(buildings.df$cd_code,"_",buildings.df$school_codes,sep="")
-    buildings.df <- buildings.df[,!grepl("cd_code|school_codes",names(buildings.df))] %>%
-                      .[,c(length(names(.)),1:(length(names(.))-1))]
+    names(buildings.df)[names(buildings.df) == "id"] <- "building_id"
+    
+    #buildings.df <- buildings.df[,!grepl("cd_code|school_codes",names(buildings.df))] %>%
+    #                  .[,c(length(names(.)),1:(length(names(.))-1))]
     
   #IMPORT SAPP DATA AND STACK INTO SINGLE DATA FRAME
     
@@ -155,6 +160,8 @@ library(chron)
     non.sapp.colnames.v <- names(sapp.df)[c(1:length(names(sapp.df))) %>% setdiff(.,sapp.ans.colnums.v)]
     
   
+    
+    
   #CALCULATE PERCENT ANSWERS THE SAME (& OTHER USEFUL USER STATISTICS)
     
     sapp.responses.duplicated.ls <- list()
@@ -249,16 +256,20 @@ library(chron)
       
       
       
-      
+#####################################################
 ### REPORTING CALCULATIONS & EXPORT TO POWERPOINT ###
   
-  reporting.districts <- setdiff(users.df$district %>% unique, c(NA, "Test District"))
+  reporting.districts <- setdiff(users.df$district %>% unique, c(NA, "Test District"))[order(setdiff(users.df$district %>% unique, c(NA, "Test District")))]
   m <- 1
   #for(m in 1:length(reporting.districts)){ # START OF LOOP BY DISTRICT
     
     district.name.m <- reporting.districts[m]
+    
     users.df.m <- users.df[users.df$district == district.name.m,]
-    buildings.df.m <- buildings.df[buildings.df]
+    users.df.m <- users.df.m[!is.na(users.df.m[1]),]  #Remove NAs that were created for unknown reason
+    
+    buildings.df.m <- buildings.df[buildings.df$building_id %in% users.df.m$building_id,]
+    sapp.df.m <- sapp.df[sapp.df$user_id %in% users.df.m$user_id,]
     
     #Copy template file into target directory & rename with individual report name 
     if(m == 1){
@@ -348,106 +359,94 @@ library(chron)
     ## SLIDE ## USERS BY SCHOOL
     {  
       # CALCULATIONS
-      
+        slide.data.df <- count(users.df.m, school) %>% as.data.frame(.)
       
       # PPT SLIDE CREATION
         pptx.m <- addSlide( pptx.m, slide.layout = 'S2')
         
         #Title
-          s3.title <- pot("Overall Scale Performance",title.format)
+          slide.title <- pot("Users Count by School",title.format)
           pptx.m <- addParagraph(pptx.m, 
-                                 s3.title, 
+                                 slide.title, 
                                  height = 0.89,
                                  width = 8.47,
                                  offx = 0.83,
-                                 offy = 0.85,
+                                 offy = 0.5,
                                  par.properties=parProperties(text.align="left", padding=0)
           )
-          
+            
         #Viz
-          s3.outputs.df$category <- factor(s3.outputs.df$category, levels = s3.outputs.df$category)
+          #slide.data.df$category <- factor(slide.data.df$category, levels = slide.data.df$category)
           
-          s3.graph <- ggplot(data = s3.outputs.df, aes(x = rev(category))) + 
-            geom_bar(
-              aes(y = score_school_avg), 
-              stat="identity", 
-              fill = c(rep(purplegraphshade, length(s3.outputs.df$score_school_avg)-1), titlegreen),  
-              #      cbind(s3.outputs.df$category %>% as.character(.),.) %>%
-              #       as.data.frame(.),
-              #s3.outputs.df[!is.na(s3.outputs.df$score_school_avg),],
-              #by = c("V1","category")
-              #)
-              
-              width = 0.8) + 
-            geom_errorbar(
-              mapping = aes(ymin = score_state_avg-.015, ymax = score_state_avg-.015), 
-              color = "black", 
-              width = 0.9,
-              size = 1.2,
-              alpha = 0.2) +
-            geom_errorbar(
-              mapping = aes(ymin = score_state_avg, ymax = score_state_avg), 
-              color = "#fae029", 
-              width = 0.9,
-              size = 1.2) +
-            ylim(0,5) +
-            labs(x = "", y = "") +
-            scale_x_discrete(labels = c("Effective Teaching and Learning",
-                                        "Common Formative Assessment",
-                                        "Data-based Decision-making",
-                                        "Leadership",
-                                        "Professional Development") %>% rev
+          slide.graph <- ggplot(
+              data = slide.data.df, aes(x = rev(school))) + 
+            
+            #Horizontal line for district average
+            geom_hline(
+              #aes(yintercept = "stuff"),
+              yintercept = mean(slide.data.df$n),
+              linetype = "dashed",
+              color = graphlabelsgrey,
+              size = 0.9
             ) +
-            geom_text(aes(                                                          #data labels inside base of columns
-              y = 0.4, 
-              label = s3.outputs.df$score_school_avg %>% round(.,1) %>% format(., nsmall = 1)
-            ), 
-            size = 4,
-            color = "white") + 
-            theme(panel.background = element_blank(),
-                  panel.grid.major.y = element_blank(),
-                  panel.grid.major.x = element_line(color = graphgridlinesgrey),
-                  axis.text.x = element_text(size = 0, color = "white"),
-                  axis.text.y = element_text(size = 15, color = graphlabelsgrey),
-                  axis.ticks = element_blank()
-            ) +     
-            coord_flip() 
+            
+            #Y axis labels
+            scale_y_continuous(
+              breaks = c(
+                          seq(
+                            0,
+                            max(slide.data.df$n), 
+                            by = ifelse(max(slide.data.df$n) < 10, 1, round(max(slide.data.df$n)/5,ifelse(max(slide.data.df$n) > 100, -1, 0)))
+                          ),
+                          mean(slide.data.df$n)
+                        ),
+              label = c(
+                        seq(
+                          0,
+                          max(slide.data.df$n), 
+                          by = ifelse(max(slide.data.df$n) < 10, 1, round(max(slide.data.df$n)/5,ifelse(max(slide.data.df$n) > 100, -1, 0)))
+                        ),
+                        "District Avg."
+                      )
+            ) +
+            
+            #Bar chart itself
+            geom_bar(
+              aes(y = n), 
+              stat="identity", 
+              fill = rep(purplegraphshade, length(slide.data.df$n)),  
+              width = 0.8) + 
+            
+            labs(x = "", y = "Num. Users") +
+            
           
-          s3.graph
+            #Data labels inside base of columns
+            geom_text(
+              aes(                                                         
+                y = min(slide.data.df$n)/2, 
+                label = slide.data.df$n
+              ), 
+              size = 4,
+              color = "white") + 
+              
+              theme(panel.background = element_blank(),
+                    panel.grid.major.y = element_line(color = graphgridlinesgrey),
+                    panel.grid.major.x = element_blank(),
+                    axis.text.x = element_text(size = 10, color = graphlabelsgrey, angle = 35, hjust = 0.95),
+                    axis.text.y = element_text(size = 12, color = graphlabelsgrey),
+                    axis.ticks = element_blank()
+              )
+          
+          slide.graph
           
           pptx.m <- addPlot(pptx.m,
                             fun = print,
-                            x = s3.graph,
-                            height = 2.85,
-                            width = 6.39,
-                            offx = 1.8,
-                            offy = 2.16)
-          
-        #Notes
-          s3.notes <- pot("Notes: (a) A score of 4 represents a response of 'most of the time' for Effective Teaching and Learning Practices, Common Formative Assessment, and Data-based Decision-making scales, and 'agree' for the Leadership, and Professional Development scale. (b) The 2017-18 state average is marked with the yellow bar.",
-                          notes.format)
-          
-          pptx.m <- addParagraph(pptx.m,
-                                 s3.notes,
-                                 height = 1.39,
-                                 width = 8.47,
-                                 offx = 0.83,
-                                 offy = 5.28,
-                                 par.properties = parProperties(text.align ="left", padding = 0)
-          )
-          
-          s3.notes.2 <- pot("The 2017-18 state average is marked with the yellow bar.",
-                            textProperties(color = "black", font.size = 14))
-          
-          pptx.m <- addParagraph(pptx.m,
-                                 s3.notes.2,
-                                 height = 0.71,
-                                 width = 8.47,
-                                 offx = 2.74,
-                                 offy = 6.85,
-                                 par.properties = parProperties(text.align ="left", padding = 0)
-          )
-          
+                            x = slide.graph,
+                            height = 5,
+                            width = 8-5/dim(slide.data.df)[1],
+                            offx = 4-(8-5/dim(slide.data.df)[1])/2,
+                            offy = 0.5+1)
+    
         #Page number
           pptx.m <- addPageNumber(pptx.m)
         
@@ -455,7 +454,90 @@ library(chron)
           writeDoc(pptx.m, file = target.file.m) #test Slide build up to this point
     }  
     
+      
+## SLIDE ## RESPONSES BY SCHOOL AND SAPP
+  {  
+    # CALCULATIONS
+    slide.data.df <- full_join(sapp.df.m,users.df.m,by = "user_id") %>% select(., "school", "sapp", "response_id") %>% count(., school, sapp) %>% as.data.frame
     
+    # PPT SLIDE CREATION
+    pptx.m <- addSlide( pptx.m, slide.layout = 'S2')
+    
+    #Title
+    slide.title <- pot("Users Count by School",title.format)
+    pptx.m <- addParagraph(pptx.m, 
+                           slide.title, 
+                           height = 0.89,
+                           width = 8.47,
+                           offx = 0.83,
+                           offy = 0.85,
+                           par.properties=parProperties(text.align="left", padding=0)
+    )
+    
+    #Viz
+
+    slide.graph <- ggplot(
+      data = slide.data.df, aes(x = rev(school))) + 
+      
+      #Horizontal line for district average
+      geom_hline(
+        #aes(yintercept = "stuff"),
+        yintercept = mean(slide.data.df$n),
+        linetype = "dashed",
+        color = graphlabelsgrey,
+        size = 0.9
+      ) +
+      
+      #Y axis labels
+      scale_y_continuous(
+        breaks = c(seq(10,max(slide.data.df$n), by = round(max(slide.data.df$n)/6,-1)), mean(slide.data.df$n)),
+        label = c(seq(10,max(slide.data.df$n), by = 20), "District Avg.")
+      ) +
+      
+      #Bar chart itself
+      geom_bar(
+        aes(y = n), 
+        stat="identity", 
+        fill = rep(purplegraphshade, length(slide.data.df$n)),  
+        width = 0.8) + 
+      
+      labs(x = "", y = "Num. Users") +
+      
+      
+      #Data labels inside base of columns
+      geom_text(
+        aes(                                                         
+          y = 5, 
+          label = slide.data.df$n
+        ), 
+        size = 4,
+        color = "white") + 
+      
+      theme(panel.background = element_blank(),
+            panel.grid.major.y = element_line(color = graphgridlinesgrey),
+            panel.grid.major.x = element_blank(),
+            axis.text.x = element_text(size = 10, color = graphlabelsgrey, angle = 35, hjust = 0.95),
+            axis.text.y = element_text(size = 12, color = graphlabelsgrey),
+            axis.ticks = element_blank()
+      )
+    
+    slide.graph
+    
+    pptx.m <- addPlot(pptx.m,
+                      fun = print,
+                      x = slide.graph,
+                      height = 5,
+                      width = 8,
+                      offx = 0.8,
+                      offy = 2.16)
+    
+    #Page number
+    pptx.m <- addPageNumber(pptx.m)
+    
+    #Write slide
+    writeDoc(pptx.m, file = target.file.m) #test Slide build up to this point
+  }  
+  
     
     
     
@@ -479,7 +561,7 @@ library(chron)
       
       
       
-            
+##################################            
 ### EXPORT FINAL Data AS EXCEL ###
 { 
   #Create unique folder for output
