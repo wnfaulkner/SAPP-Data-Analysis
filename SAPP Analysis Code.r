@@ -31,8 +31,9 @@ library(reshape2)
 library(openxlsx)
 library(chron)
 
+#########################
 ### LOAD & CLEAN DATA ###
-
+{
   #Set working directory
     #M900
       working.dir <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis"
@@ -158,9 +159,7 @@ library(chron)
     sapp.ans.colnums.v <-  grep(paste(sapp.profile.names.v,collapse = "|"),names(sapp.df)) 
     non.sapp.colnums.v <- c(1:length(names(sapp.df))) %>% setdiff(.,sapp.ans.colnums.v)
     non.sapp.colnames.v <- names(sapp.df)[c(1:length(names(sapp.df))) %>% setdiff(.,sapp.ans.colnums.v)]
-    
-  
-    
+     
     
   #CALCULATE PERCENT ANSWERS THE SAME (& OTHER USEFUL USER STATISTICS)
     
@@ -241,17 +240,20 @@ library(chron)
       sapp.responses.duplicated.df <- do.call(rbind, sapp.responses.duplicated.ls)  # convert list to data frame
       sapp.df <- full_join(sapp.df, sapp.responses.duplicated.df, by = "response_id", all = TRUE) # join resulting data frame to sapp.df to give it extra timediff column
       
-      #Graph density of time difference between duplicate responses
-        density(sapp.df$duplicated_timedif[!is.na(sapp.df$duplicated_timedif)] , kernel = "gaussian") %>% plot(., main = "Distribution of time between duplicate responses (sec)")
-      
-      #Create frequency to determine shape of distribution
-        #timediff.cuts <- seq(min(sapp.df$duplicated_timedif),max(sapp.df$duplicated_timedif), 10)
-      
+    #Graph density of time difference between duplicate responses
+      density(sapp.df$duplicated_timedif[!is.na(sapp.df$duplicated_timedif)] , kernel = "gaussian") %>% plot(., main = "Distribution of time between duplicate responses (sec)")
+    
+    #Create frequency to determine shape of distribution
+      #timediff.cuts <- seq(min(sapp.df$duplicated_timedif),max(sapp.df$duplicated_timedif), 10)
+    
+    #Eliminate dublicate responses less than 24hrs (86,400 seconds) apart
+      sapp.df <- sapp.df[sapp.df$duplicated_timedif > 86400 | is.na(sapp.df$duplicated_timedif),]
+        
     #Changining variable classes for certain columns
       users.df$tot.num.responses <- users.df$tot.num.responses %>% as.numeric(.)
       users.df$pct.dif <- users.df$pct.dif %>% as.numeric
       #users.df$pct.dif %>% summary
-
+}
       
       
       
@@ -262,37 +264,46 @@ library(chron)
   reporting.districts <- setdiff(users.df$district %>% unique, c(NA, "Test District"))[order(setdiff(users.df$district %>% unique, c(NA, "Test District")))]
   
   aggregate(users.df$tot.num.responses, by = list(district=users.df$district), FUN=sum) #shows responses by district in full data
-      
-  #m <- 5 # for testing loop
+  
+  progress.bar.m <- txtProgressBar(min = 0, max = 100, style = 3)
+  maxrow <- length(reporting.districts)
+  m <- 5 # for testing loop
+  
+  template.file <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation for MMD/Report Template/CWIS Template.pptx"
+  target.dir <- paste("C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/R script outputs/",
+                      "Output_",
+                      gsub(":",".",Sys.time()), sep = "")
   
   for(m in 1:length(reporting.districts)){ # START OF LOOP BY DISTRICT
     
-    district.name.m <- reporting.districts[m]
+    setTxtProgressBar(progress.bar.m, 100*m/maxrow)      
     
-    users.df.m <- users.df[users.df$district == district.name.m,]
-    users.df.m <- users.df.m[!is.na(users.df.m[1]),]  #Remove NAs that were created for unknown reason
+    # Data & File Setup
     
-    buildings.df.m <- buildings.df[buildings.df$building_id %in% users.df.m$building_id,]
-    sapp.df.m <- sapp.df[sapp.df$user_id %in% users.df.m$user_id,]
+      district.name.m <- reporting.districts[m]
+      
+      users.df.m <- users.df[which(users.df$district == district.name.m & users.df$test.user == FALSE),]
+      #users.df.m <- users.df.m[!is.na(users.df.m[1]),]  #Remove NAs that were created for unknown reason
+      
+      buildings.df.m <- buildings.df[buildings.df$building_id %in% users.df.m$building_id,]
+      
+      sapp.df.m <- sapp.df[sapp.df$user_id %in% users.df.m$user_id,]
+      
+      #Copy template file into target directory & rename with individual report name 
+      if(m == 1){
+        dir.create(target.dir)
+      }
+      
+      target.file.m <- paste( target.dir,
+                              "/",
+                              "SAPP Report_",
+                              district.name.m,
+                              ".pptx", sep="") 
+      file.copy(template.file, target.file.m)
     
-    #Copy template file into target directory & rename with individual report name 
-    if(m == 1){
-      template.file <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation for MMD/Report Template/CWIS Template.pptx"
-      target.dir <- paste("C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/R script outputs/",
-                          "Output_",
-                          gsub(":",".",Sys.time()), sep = "")
-      dir.create(target.dir)
-    }
     
-    #file.copy(template.file,target.dir)
-    target.file.m <- paste( target.dir,
-                            "/",
-                            "SAPP Report_",
-                            district.name.m,
-                            ".pptx", sep="") 
-    file.copy(template.file, target.file.m)
-        
-    #Powerpoint Formatting Setup
+    # Powerpoint Formatting Setup
+    {
       pptx.m <- pptx(template = target.file.m)
       
       options("ReporteRs-fontsize" = 20)
@@ -323,8 +334,9 @@ library(chron)
       subtitle.format <- textProperties(color = notesgrey, font.size = 28, font.weight = "bold")
       section.title.format <- textProperties(color = "white", font.size = 48, font.weight = "bold")
       notes.format <- textProperties(color = notesgrey, font.size = 14)
+    }
     
-    ### SLIDE ## Cover Slide
+    ### SLIDE ## COVER SLIDE
     {
       pptx.m <- addSlide( pptx.m, slide.layout = 'Title Slide', bookmark = 1)
       
@@ -359,17 +371,20 @@ library(chron)
       )
       writeDoc(pptx.m, file = target.file.m) #test Slide 1 build
     }  
-
-    ## SLIDE ## USERS BY SCHOOL
+  
+    ### SLIDE ### USERS BY SCHOOL
     {  
-      # CALCULATIONS
-        slide.data.df <- count(users.df.m, school) %>% as.data.frame(.)
       
+      # CALCULATIONS
+        
+        slide.data.df <- count(users.df.m, school) %>% as.data.frame(.)
+        #slide.data.df
+        
       # PPT SLIDE CREATION
         pptx.m <- addSlide( pptx.m, slide.layout = 'S2')
         
         #Title
-          slide.title <- pot("User Count",title.format)
+          slide.title <- pot("SAPP User Count",title.format)
           pptx.m <- addParagraph(pptx.m, 
                                  slide.title, 
                                  height = 0.89,
@@ -380,8 +395,8 @@ library(chron)
           )
             
         #Viz
-          #slide.data.df$category <- factor(slide.data.df$category, levels = slide.data.df$category)
-          
+          if(dim(users.df.m)[1] > 0){
+
           slide.graph <- ggplot(
               data = slide.data.df, aes(x = rev(school))) + 
             
@@ -390,30 +405,28 @@ library(chron)
               yintercept = mean(slide.data.df$n),
               linetype = "dashed",
               color = graphlabelsgrey,
-              size = 0.9
+              size = 0.9,
+              show.legend = TRUE
             ) +
+            
+            #scale_linetype_manual(name = "District Average", values = 2, 
+            #                      guide = guide_legend(override.aes = list(color = graphlabelsgrey))) +
             
             #Y axis labels
             scale_y_continuous(
-              breaks = c(
-                          seq(
-                            0,
-                            max(slide.data.df$n), 
-                            by = ifelse(max(slide.data.df$n) < 10, 1, round(max(slide.data.df$n)/5,ifelse(max(slide.data.df$n) > 100, -1, 0)))
-                          ),
-                          mean(slide.data.df$n)
-                        ),
-              label = c(
-                        seq(
+              breaks =  seq(
                           0,
                           max(slide.data.df$n), 
                           by = ifelse(max(slide.data.df$n) < 10, 1, round(max(slide.data.df$n)/5,ifelse(max(slide.data.df$n) > 100, -1, 0)))
                         ),
-                        "District Avg."
-                      )
+              label = seq(
+                        0,
+                        max(slide.data.df$n), 
+                        by = ifelse(max(slide.data.df$n) < 10, 1, round(max(slide.data.df$n)/5,ifelse(max(slide.data.df$n) > 100, -1, 0)))
+                      ),
             ) +
             
-            #Bar chart itself
+            #Bars
             geom_bar(
               aes(y = n), 
               stat="identity", 
@@ -426,7 +439,7 @@ library(chron)
             #Data labels inside base of columns
             geom_text(
               aes(                                                         
-                y = min(slide.data.df$n)/2, 
+                y = min(slide.data.df$n)/2+2, 
                 label = slide.data.df$n
               ), 
               size = 4,
@@ -446,23 +459,67 @@ library(chron)
                             fun = print,
                             x = slide.graph,
                             height = 5,
-                            width = 8-5/dim(slide.data.df)[1],
-                            offx = 4-(8-5/dim(slide.data.df)[1])/2,
+                            width = 7.5-5/dim(slide.data.df)[1],
+                            offx = 4.5-(7.5-5/dim(slide.data.df)[1])/2,
                             offy = 0.5+1)
-    
+          
+        #District average legend
+          slide.legend.1 <- pot("- - - - - - -",
+                                textProperties(color = graphlabelsgrey, font.size = 30))
+          
+          pptx.m <- addParagraph(pptx.m,
+                                 slide.legend.1,
+                                 height = 1,
+                                 width = 3,
+                                 offx = 8,
+                                 offy = 2.1,
+                                 par.properties = parProperties(text.align ="left", padding = 0)
+          )
+          
+          slide.legend.2 <- pot("District average",
+                            textProperties(color = graphlabelsgrey, font.size = 12))
+          
+          pptx.m <- addParagraph(pptx.m,
+                                 slide.legend.2,
+                                 height = 1,
+                                 width = 3,
+                                 offx = 8,
+                                 offy = 2.5,
+                                 par.properties = parProperties(text.align ="left", padding = 0)
+                    )
+          
+          
+          }else{ # If no users in district
+          slide.notes <- pot("No SAPP users in district.",
+                              textProperties(color = "black", font.size = 18))
+            
+          pptx.m <- addParagraph(pptx.m,
+                                 slide.notes,
+                                 height = 1,
+                                 width = 4,
+                                 offx = 7.5/2,
+                                 offy = 5/2,
+                                 par.properties = parProperties(text.align ="left", padding = 0)
+            )
+           
+          }
+        
         #Page number
           pptx.m <- addPageNumber(pptx.m)
         
         #Write slide
           writeDoc(pptx.m, file = target.file.m) #test Slide build up to this point
+        
+        #If no users in district, skip producing rest of slides
+          if(dim(users.df.m)[1] > 1){next()}else{}
     }  
-    
-    ## SLIDE ## RESPONSES BY SCHOOL AND SAPP
+  
+  
+    ### SLIDE ### RESPONSES BY SCHOOL AND SAPP
     {  
       # CALCULATIONS
-      slide.data.df <- full_join(sapp.df.m, users.df.m, by = "user_id") %>% 
+      slide.data.df <- full_join(sapp.df.m, users.df.m, by = "user_id") %>% filter(., !is.na(sapp)) %>%
                           select(., "school", "sapp", "response_id") %>% 
-                          #tidyr::gather(., "")
                           count(., school, sapp) %>% 
                           as.data.frame
       
@@ -486,7 +543,7 @@ library(chron)
       #Viz
   
       slide.graph <- ggplot(
-        data = slide.data.df, aes(x = school, y = n)) + 
+        data = slide.data.df, aes(x = school, y = n, group = sapp, color = sapp)) + 
         
         #Horizontal line for district average
         geom_hline(
@@ -498,32 +555,32 @@ library(chron)
         
         #Bar chart itself
         geom_bar(
-          aes(fill = sapp), 
+          #aes(fill = ifelse(slide.data.df$sapp %>% unique() %>% is.na(),titlegreen, sapp)), 
           stat="identity", 
-          #fill = rep(purplegraphshade, length(slide.data.df$n)),  
           width = 0.8) + 
         
         #Y axis labels
         scale_y_continuous(
-          breaks = c(
+          breaks = 
             seq(
               0,
               max(tot.slide.data.df$n), 
               by = ifelse(max(slide.data.df$n) < 10, 1, round(max(tot.slide.data.df$n)/5,ifelse(max(tot.slide.data.df$n) > 100, -1, 0)))
             ),
-            mean(tot.slide.data.df$n)
-          ),
-          label = c(
+          label = 
             seq(
               0,
               max(tot.slide.data.df$n), 
               by = ifelse(max(tot.slide.data.df$n) < 10, 1, round(max(tot.slide.data.df$n)/5,ifelse(max(tot.slide.data.df$n) > 100, -1, 0)))
             ),
-            "District Avg."
-          )
-        ) +
+          ) +
         
         labs(x = "", y = "Num. Responses") +
+        
+        scale_shape_discrete(
+          name = "SAPP",
+          breaks = ifelse(slide.data.df$sapp %>% unique() %>% is.na(), "NA", sapp)
+        ) +
         
         theme(panel.background = element_blank(),
               panel.grid.major.y = element_line(color = graphgridlinesgrey),
@@ -531,6 +588,7 @@ library(chron)
               axis.text.x = element_text(size = 12, color = graphlabelsgrey, angle = 30, hjust = 0.95),
               axis.text.y = element_text(size = 12, color = graphlabelsgrey),
               axis.ticks = element_blank(),
+              #legend.title = element_text("SAPP"),
               legend.text = element_text(size = 12)
         )
         
@@ -550,9 +608,8 @@ library(chron)
       #Write slide
       writeDoc(pptx.m, file = target.file.m) #test Slide build up to this point
     }  
-    
-  
-    ## SLIDE ## RESPONSES BY SCHOOL AND SAPP
+  }  
+    ### SLIDE ### PERFORMANCE - % PROFICIENT 
     {  
       # CALCULATIONS
       slide.data.df <- full_join(sapp.df.m, users.df.m, by = "user_id") %>% 
@@ -645,7 +702,7 @@ library(chron)
       #Write slide
       writeDoc(pptx.m, file = target.file.m) #test Slide build up to this point
     }  
-        
+  
   }  # END OF LOOP BY DISTRICT
   
 
