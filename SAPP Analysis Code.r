@@ -260,8 +260,12 @@ library(chron)
 ### REPORTING CALCULATIONS & EXPORT TO POWERPOINT ###
   
   reporting.districts <- setdiff(users.df$district %>% unique, c(NA, "Test District"))[order(setdiff(users.df$district %>% unique, c(NA, "Test District")))]
-  m <- 1
-  #for(m in 1:length(reporting.districts)){ # START OF LOOP BY DISTRICT
+  
+  aggregate(users.df$tot.num.responses, by = list(district=users.df$district), FUN=sum) #shows responses by district in full data
+      
+  #m <- 5 # for testing loop
+  
+  for(m in 1:length(reporting.districts)){ # START OF LOOP BY DISTRICT
     
     district.name.m <- reporting.districts[m]
     
@@ -365,7 +369,7 @@ library(chron)
         pptx.m <- addSlide( pptx.m, slide.layout = 'S2')
         
         #Title
-          slide.title <- pot("Users Count by School",title.format)
+          slide.title <- pot("User Count",title.format)
           pptx.m <- addParagraph(pptx.m, 
                                  slide.title, 
                                  height = 0.89,
@@ -383,7 +387,6 @@ library(chron)
             
             #Horizontal line for district average
             geom_hline(
-              #aes(yintercept = "stuff"),
               yintercept = mean(slide.data.df$n),
               linetype = "dashed",
               color = graphlabelsgrey,
@@ -432,7 +435,7 @@ library(chron)
               theme(panel.background = element_blank(),
                     panel.grid.major.y = element_line(color = graphgridlinesgrey),
                     panel.grid.major.x = element_blank(),
-                    axis.text.x = element_text(size = 10, color = graphlabelsgrey, angle = 35, hjust = 0.95),
+                    axis.text.x = element_text(size = 12, color = graphlabelsgrey, angle = 30, hjust = 0.95),
                     axis.text.y = element_text(size = 12, color = graphlabelsgrey),
                     axis.ticks = element_blank()
               )
@@ -454,106 +457,196 @@ library(chron)
           writeDoc(pptx.m, file = target.file.m) #test Slide build up to this point
     }  
     
+    ## SLIDE ## RESPONSES BY SCHOOL AND SAPP
+    {  
+      # CALCULATIONS
+      slide.data.df <- full_join(sapp.df.m, users.df.m, by = "user_id") %>% 
+                          select(., "school", "sapp", "response_id") %>% 
+                          #tidyr::gather(., "")
+                          count(., school, sapp) %>% 
+                          as.data.frame
       
-## SLIDE ## RESPONSES BY SCHOOL AND SAPP
-  {  
-    # CALCULATIONS
-    slide.data.df <- full_join(sapp.df.m,users.df.m,by = "user_id") %>% select(., "school", "sapp", "response_id") %>% count(., school, sapp) %>% as.data.frame
-    
-    # PPT SLIDE CREATION
-    pptx.m <- addSlide( pptx.m, slide.layout = 'S2')
-    
-    #Title
-    slide.title <- pot("Users Count by School",title.format)
-    pptx.m <- addParagraph(pptx.m, 
-                           slide.title, 
-                           height = 0.89,
-                           width = 8.47,
-                           offx = 0.83,
-                           offy = 0.85,
-                           par.properties=parProperties(text.align="left", padding=0)
-    )
-    
-    #Viz
-
-    slide.graph <- ggplot(
-      data = slide.data.df, aes(x = rev(school))) + 
+      tot.slide.data.df <- aggregate(slide.data.df$n, by = list(slide.data.df$school), FUN = sum)
+      names(tot.slide.data.df) <- c("Group","n")
       
-      #Horizontal line for district average
-      geom_hline(
-        #aes(yintercept = "stuff"),
-        yintercept = mean(slide.data.df$n),
-        linetype = "dashed",
-        color = graphlabelsgrey,
-        size = 0.9
-      ) +
+      # PPT SLIDE CREATION
+      pptx.m <- addSlide( pptx.m, slide.layout = 'S2')
       
-      #Y axis labels
-      scale_y_continuous(
-        breaks = c(seq(10,max(slide.data.df$n), by = round(max(slide.data.df$n)/6,-1)), mean(slide.data.df$n)),
-        label = c(seq(10,max(slide.data.df$n), by = 20), "District Avg.")
-      ) +
-      
-      #Bar chart itself
-      geom_bar(
-        aes(y = n), 
-        stat="identity", 
-        fill = rep(purplegraphshade, length(slide.data.df$n)),  
-        width = 0.8) + 
-      
-      labs(x = "", y = "Num. Users") +
-      
-      
-      #Data labels inside base of columns
-      geom_text(
-        aes(                                                         
-          y = 5, 
-          label = slide.data.df$n
-        ), 
-        size = 4,
-        color = "white") + 
-      
-      theme(panel.background = element_blank(),
-            panel.grid.major.y = element_line(color = graphgridlinesgrey),
-            panel.grid.major.x = element_blank(),
-            axis.text.x = element_text(size = 10, color = graphlabelsgrey, angle = 35, hjust = 0.95),
-            axis.text.y = element_text(size = 12, color = graphlabelsgrey),
-            axis.ticks = element_blank()
+      #Title
+      slide.title <- pot("Num. Responses by Profile",title.format)
+      pptx.m <- addParagraph(pptx.m, 
+                             slide.title, 
+                             height = 0.89,
+                             width = 8.47,
+                             offx = 0.83,
+                             offy = 0.85,
+                             par.properties=parProperties(text.align="left", padding=0)
       )
-    
-    slide.graph
-    
-    pptx.m <- addPlot(pptx.m,
-                      fun = print,
-                      x = slide.graph,
-                      height = 5,
-                      width = 8,
-                      offx = 0.8,
-                      offy = 2.16)
-    
-    #Page number
-    pptx.m <- addPageNumber(pptx.m)
-    
-    #Write slide
-    writeDoc(pptx.m, file = target.file.m) #test Slide build up to this point
-  }  
+      
+      #Viz
   
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+      slide.graph <- ggplot(
+        data = slide.data.df, aes(x = school, y = n)) + 
         
-  #}  # END OF LOOP BY DISTRICT
+        #Horizontal line for district average
+        geom_hline(
+          yintercept = tot.slide.data.df %>% .[,2] %>% mean, #mean responses per school
+          linetype = "dashed",
+          color = graphlabelsgrey,
+          size = 0.9
+        ) +
+        
+        #Bar chart itself
+        geom_bar(
+          aes(fill = sapp), 
+          stat="identity", 
+          #fill = rep(purplegraphshade, length(slide.data.df$n)),  
+          width = 0.8) + 
+        
+        #Y axis labels
+        scale_y_continuous(
+          breaks = c(
+            seq(
+              0,
+              max(tot.slide.data.df$n), 
+              by = ifelse(max(slide.data.df$n) < 10, 1, round(max(tot.slide.data.df$n)/5,ifelse(max(tot.slide.data.df$n) > 100, -1, 0)))
+            ),
+            mean(tot.slide.data.df$n)
+          ),
+          label = c(
+            seq(
+              0,
+              max(tot.slide.data.df$n), 
+              by = ifelse(max(tot.slide.data.df$n) < 10, 1, round(max(tot.slide.data.df$n)/5,ifelse(max(tot.slide.data.df$n) > 100, -1, 0)))
+            ),
+            "District Avg."
+          )
+        ) +
+        
+        labs(x = "", y = "Num. Responses") +
+        
+        theme(panel.background = element_blank(),
+              panel.grid.major.y = element_line(color = graphgridlinesgrey),
+              panel.grid.major.x = element_blank(),
+              axis.text.x = element_text(size = 12, color = graphlabelsgrey, angle = 30, hjust = 0.95),
+              axis.text.y = element_text(size = 12, color = graphlabelsgrey),
+              axis.ticks = element_blank(),
+              legend.text = element_text(size = 12)
+        )
+        
+      slide.graph
+      
+      pptx.m <- addPlot(pptx.m,
+                        fun = print,
+                        x = slide.graph,
+                        height = 5,
+                        width = 8,
+                        offx = 0.8,
+                        offy = 2.16)
+      
+      #Page number
+      pptx.m <- addPageNumber(pptx.m)
+      
+      #Write slide
+      writeDoc(pptx.m, file = target.file.m) #test Slide build up to this point
+    }  
+    
+  
+    ## SLIDE ## RESPONSES BY SCHOOL AND SAPP
+    {  
+      # CALCULATIONS
+      slide.data.df <- full_join(sapp.df.m, users.df.m, by = "user_id") %>% 
+        select(., "school", "sapp", "response_id") %>% 
+        #tidyr::gather(., "")
+        count(., school, sapp) %>% 
+        as.data.frame
+      
+      tot.slide.data.df <- aggregate(slide.data.df$n, by = list(slide.data.df$school), FUN = sum)
+      names(tot.slide.data.df) <- c("Group","n")
+      
+      # PPT SLIDE CREATION
+      pptx.m <- addSlide( pptx.m, slide.layout = 'S2')
+      
+      #Title
+      slide.title <- pot("Num. Responses by Profile",title.format)
+      pptx.m <- addParagraph(pptx.m, 
+                             slide.title, 
+                             height = 0.89,
+                             width = 8.47,
+                             offx = 0.83,
+                             offy = 0.85,
+                             par.properties=parProperties(text.align="left", padding=0)
+      )
+      
+      #Viz
+      
+      slide.graph <- ggplot(
+        data = slide.data.df, aes(x = school, y = n)) + 
+        
+        #Horizontal line for district average
+        geom_hline(
+          yintercept = tot.slide.data.df %>% .[,2] %>% mean, #mean responses per school
+          linetype = "dashed",
+          color = graphlabelsgrey,
+          size = 0.9
+        ) +
+        
+        #Bar chart itself
+        geom_bar(
+          aes(fill = sapp), 
+          stat="identity", 
+          #fill = rep(purplegraphshade, length(slide.data.df$n)),  
+          width = 0.8) + 
+        
+        #Y axis labels
+        scale_y_continuous(
+          breaks = c(
+            seq(
+              0,
+              max(tot.slide.data.df$n), 
+              by = ifelse(max(slide.data.df$n) < 10, 1, round(max(tot.slide.data.df$n)/5,ifelse(max(tot.slide.data.df$n) > 100, -1, 0)))
+            ),
+            mean(tot.slide.data.df$n)
+          ),
+          label = c(
+            seq(
+              0,
+              max(tot.slide.data.df$n), 
+              by = ifelse(max(tot.slide.data.df$n) < 10, 1, round(max(tot.slide.data.df$n)/5,ifelse(max(tot.slide.data.df$n) > 100, -1, 0)))
+            ),
+            "District Avg."
+          )
+        ) +
+        
+        labs(x = "", y = "Num. Responses") +
+        
+        theme(panel.background = element_blank(),
+              panel.grid.major.y = element_line(color = graphgridlinesgrey),
+              panel.grid.major.x = element_blank(),
+              axis.text.x = element_text(size = 12, color = graphlabelsgrey, angle = 30, hjust = 0.95),
+              axis.text.y = element_text(size = 12, color = graphlabelsgrey),
+              axis.ticks = element_blank(),
+              legend.text = element_text(size = 12)
+        )
+      
+      slide.graph
+      
+      pptx.m <- addPlot(pptx.m,
+                        fun = print,
+                        x = slide.graph,
+                        height = 5,
+                        width = 8,
+                        offx = 0.8,
+                        offy = 2.16)
+      
+      #Page number
+      pptx.m <- addPageNumber(pptx.m)
+      
+      #Write slide
+      writeDoc(pptx.m, file = target.file.m) #test Slide build up to this point
+    }  
+        
+  }  # END OF LOOP BY DISTRICT
   
 
       
