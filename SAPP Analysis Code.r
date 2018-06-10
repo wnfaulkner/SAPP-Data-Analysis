@@ -156,7 +156,8 @@ library(chron)
                   sapp.df[grepl(paste(paste(sapp.profile.names.v,"_",sep=""),collapse = "|"),names(sapp.df))]
                 )
    
-    sapp.ans.colnums.v <-  grep(paste(sapp.profile.names.v,collapse = "|"),names(sapp.df)) 
+    sapp.ans.colnums.v <-  grep(paste(sapp.profile.names.v,collapse = "|"),names(sapp.df))
+    sapp.colnames.v <- names(sapp.df)[sapp.ans.colnums.v]
     non.sapp.colnums.v <- c(1:length(names(sapp.df))) %>% setdiff(.,sapp.ans.colnums.v)
     non.sapp.colnames.v <- names(sapp.df)[c(1:length(names(sapp.df))) %>% setdiff(.,sapp.ans.colnums.v)]
      
@@ -263,18 +264,25 @@ library(chron)
   
   reporting.districts <- setdiff(users.df$district %>% unique, c(NA, "Test District"))[order(setdiff(users.df$district %>% unique, c(NA, "Test District")))]
   
-  aggregate(users.df$tot.num.responses, by = list(district=users.df$district), FUN=sum) #shows responses by district in full data
+  #aggregate(users.df$tot.num.responses, by = list(district=users.df$district), FUN=sum) #shows responses by district in full data
   
-  progress.bar.m <- txtProgressBar(min = 0, max = 100, style = 3)
-  maxrow <- length(reporting.districts)
-  m <- 5 # for testing loop
-  
+  # Template file copy
   template.file <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation for MMD/Report Template/CWIS Template.pptx"
   target.dir <- paste("C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/R script outputs/",
                       "Output_",
                       gsub(":",".",Sys.time()), sep = "")
   
-  for(m in 1:length(reporting.districts)){ # START OF LOOP BY DISTRICT
+  
+  
+  
+  
+  
+  progress.bar.m <- txtProgressBar(min = 0, max = 100, style = 3)
+  maxrow <- length(reporting.districts)
+  m <- 2 # for testing loop
+  #for(m in 1:3){  # for testing loop
+  
+  #for(m in 1:length(reporting.districts)){ # START OF LOOP BY DISTRICT
     
     setTxtProgressBar(progress.bar.m, 100*m/maxrow)      
     
@@ -283,13 +291,12 @@ library(chron)
       district.name.m <- reporting.districts[m]
       
       users.df.m <- users.df[which(users.df$district == district.name.m & users.df$test.user == FALSE),]
-      #users.df.m <- users.df.m[!is.na(users.df.m[1]),]  #Remove NAs that were created for unknown reason
-      
+
       buildings.df.m <- buildings.df[buildings.df$building_id %in% users.df.m$building_id,]
       
       sapp.df.m <- sapp.df[sapp.df$user_id %in% users.df.m$user_id,]
       
-      #Copy template file into target directory & rename with individual report name 
+    #Copy template file into target directory & rename with individual report name 
       if(m == 1){
         dir.create(target.dir)
       }
@@ -301,8 +308,7 @@ library(chron)
                               ".pptx", sep="") 
       file.copy(template.file, target.file.m)
     
-    
-    # Powerpoint Formatting Setup
+  # Powerpoint Formatting Setup
     {
       pptx.m <- pptx(template = target.file.m)
       
@@ -316,7 +322,7 @@ library(chron)
         title(sub = k )
       }
       
-    #Useful colors
+      #Useful colors
       titlegreen <- rgb(118,153,48, maxColorValue=255)
       notesgrey <- rgb(131,130,105, maxColorValue=255)
       graphlabelsgrey <- "#5a6b63"
@@ -328,15 +334,16 @@ library(chron)
       subtextgreen <- "#929e78"
       #notesgray <- rgb(131,130,105, maxColorValue=255)
       
-    #Text formatting
+      #Text formatting
       title.format <- textProperties(color = titlegreen, font.size = 48, font.weight = "bold")
       title.format.small <- textProperties(color = titlegreen, font.size = 40, font.weight = "bold")
       subtitle.format <- textProperties(color = notesgrey, font.size = 28, font.weight = "bold")
       section.title.format <- textProperties(color = "white", font.size = 48, font.weight = "bold")
       notes.format <- textProperties(color = notesgrey, font.size = 14)
-    }
-    
-    ### SLIDE ## COVER SLIDE
+      } 
+      
+      
+  #1  ### SLIDE ## COVER SLIDE
     {
       pptx.m <- addSlide( pptx.m, slide.layout = 'Title Slide', bookmark = 1)
       
@@ -372,7 +379,8 @@ library(chron)
       writeDoc(pptx.m, file = target.file.m) #test Slide 1 build
     }  
   
-    ### SLIDE ### USERS BY SCHOOL
+      
+  #2  ### SLIDE ### USERS BY SCHOOL
     {  
       
       # CALCULATIONS
@@ -515,16 +523,19 @@ library(chron)
     }  
   
   
-    ### SLIDE ### RESPONSES BY SCHOOL AND SAPP
+  #3  ### SLIDE ### RESPONSES BY SCHOOL AND SAPP
     {  
       # CALCULATIONS
-      slide.data.df <- full_join(sapp.df.m, users.df.m, by = "user_id") %>% filter(., !is.na(sapp)) %>%
+      slide.data.df <- full_join(sapp.df.m, users.df.m, by = "user_id") %>% 
+                          filter(., !is.na(sapp)) %>%
                           select(., "school", "sapp", "response_id") %>% 
                           count(., school, sapp) %>% 
                           as.data.frame
       
-      tot.slide.data.df <- aggregate(slide.data.df$n, by = list(slide.data.df$school), FUN = sum)
-      names(tot.slide.data.df) <- c("Group","n")
+      if(dim(slide.data.df)[1] > 0){
+        tot.slide.data.df <- aggregate(slide.data.df$n, by = list(slide.data.df$school), FUN = sum)
+        names(tot.slide.data.df) <- c("Group","n")
+      }else{}
       
       # PPT SLIDE CREATION
       pptx.m <- addSlide( pptx.m, slide.layout = 'S2')
@@ -541,168 +552,223 @@ library(chron)
       )
       
       #Viz
-  
-      slide.graph <- ggplot(
-        data = slide.data.df, aes(x = school, y = n, group = sapp, color = sapp)) + 
-        
-        #Horizontal line for district average
-        geom_hline(
-          yintercept = tot.slide.data.df %>% .[,2] %>% mean, #mean responses per school
-          linetype = "dashed",
-          color = graphlabelsgrey,
-          size = 0.9
-        ) +
-        
-        #Bar chart itself
-        geom_bar(
-          #aes(fill = ifelse(slide.data.df$sapp %>% unique() %>% is.na(),titlegreen, sapp)), 
-          stat="identity", 
-          width = 0.8) + 
-        
-        #Y axis labels
-        scale_y_continuous(
-          breaks = 
-            seq(
-              0,
-              max(tot.slide.data.df$n), 
-              by = ifelse(max(slide.data.df$n) < 10, 1, round(max(tot.slide.data.df$n)/5,ifelse(max(tot.slide.data.df$n) > 100, -1, 0)))
-            ),
-          label = 
-            seq(
-              0,
-              max(tot.slide.data.df$n), 
-              by = ifelse(max(tot.slide.data.df$n) < 10, 1, round(max(tot.slide.data.df$n)/5,ifelse(max(tot.slide.data.df$n) > 100, -1, 0)))
-            ),
+      if(dim(slide.data.df)[1] > 0){
+        slide.graph <- ggplot(
+          data = slide.data.df, aes(x = school, y = n, group = sapp, color = sapp)) + 
+          
+          #Horizontal line for district average
+          geom_hline(
+            yintercept = tot.slide.data.df %>% .[,2] %>% mean, #mean responses per school
+            linetype = "dashed",
+            color = graphlabelsgrey,
+            size = 0.9
           ) +
+          
+          #Bar chart itself
+          geom_bar(
+            aes(fill = slide.data.df$sapp), 
+            stat="identity", 
+            width = 0.8) + 
+          
+          #Y axis labels
+          scale_y_continuous(
+            breaks = 
+              seq(
+                0,
+                max(tot.slide.data.df$n), 
+                by = ifelse(max(slide.data.df$n) < 10, 1, round(max(tot.slide.data.df$n)/5,ifelse(max(tot.slide.data.df$n) > 100, -1, 0)))
+              ),
+            label = 
+              seq(
+                0,
+                max(tot.slide.data.df$n), 
+                by = ifelse(max(tot.slide.data.df$n) < 10, 1, round(max(tot.slide.data.df$n)/5,ifelse(max(tot.slide.data.df$n) > 100, -1, 0)))
+              )
+            ) +
+          
+          labs(x = "", y = "Num. Responses") +
+          
+          theme(panel.background = element_blank(),
+                panel.grid.major.y = element_line(color = graphgridlinesgrey),
+                panel.grid.major.x = element_blank(),
+                axis.text.x = element_text(size = 12, color = graphlabelsgrey, angle = 30, hjust = 0.95),
+                axis.text.y = element_text(size = 12, color = graphlabelsgrey),
+                axis.ticks = element_blank(),
+                #legend.title = element_text("SAPP"),
+                legend.text = element_text(size = 12)
+          )
+          
+        slide.graph
         
-        labs(x = "", y = "Num. Responses") +
+        pptx.m <- addPlot(pptx.m,
+                          fun = print,
+                          x = slide.graph,
+                          height = 5,
+                          width = 8,
+                          offx = 0.8,
+                          offy = 2.16)
+      }else{  
+      
+      #If no responses in district
+        slide.notes <- pot("No SAPP responses in district.",
+                           textProperties(color = "black", font.size = 18))
         
-        scale_shape_discrete(
-          name = "SAPP",
-          breaks = ifelse(slide.data.df$sapp %>% unique() %>% is.na(), "NA", sapp)
-        ) +
-        
-        theme(panel.background = element_blank(),
-              panel.grid.major.y = element_line(color = graphgridlinesgrey),
-              panel.grid.major.x = element_blank(),
-              axis.text.x = element_text(size = 12, color = graphlabelsgrey, angle = 30, hjust = 0.95),
-              axis.text.y = element_text(size = 12, color = graphlabelsgrey),
-              axis.ticks = element_blank(),
-              #legend.title = element_text("SAPP"),
-              legend.text = element_text(size = 12)
+        pptx.m <- addParagraph(pptx.m,
+                               slide.notes,
+                               height = 1,
+                               width = 4,
+                               offx = 10/2,
+                               offy = 7.5/2,
+                               par.properties = parProperties(text.align ="left", padding = 0)
         )
-        
-      slide.graph
-      
-      pptx.m <- addPlot(pptx.m,
-                        fun = print,
-                        x = slide.graph,
-                        height = 5,
-                        width = 8,
-                        offx = 0.8,
-                        offy = 2.16)
-      
+      }
       #Page number
       pptx.m <- addPageNumber(pptx.m)
       
       #Write slide
       writeDoc(pptx.m, file = target.file.m) #test Slide build up to this point
+    
+      if(dim(slide.data.df)[1] > 0){next()}else{}
     }  
-  }  
-    ### SLIDE ### PERFORMANCE - % PROFICIENT 
+
+  
+  
+  
+  
+  
+  
+  
+  #4  ### SLIDE ### PERFORMANCE - % PROFICIENT ACL
     {  
       # CALCULATIONS
-      slide.data.df <- full_join(sapp.df.m, users.df.m, by = "user_id") %>% 
-        select(., "school", "sapp", "response_id") %>% 
-        #tidyr::gather(., "")
-        count(., school, sapp) %>% 
-        as.data.frame
-      
-      tot.slide.data.df <- aggregate(slide.data.df$n, by = list(slide.data.df$school), FUN = sum)
-      names(tot.slide.data.df) <- c("Group","n")
+        sapp.cols.v <- grep(sapp.profile.names.v[2], names(sapp.df.m))
+        proficiency.cols.v <- sapp.df.m %>% 
+          lapply(., function (x) x[!is.na(x)]) %>% 
+          lapply(., function(x) max(x)) %>%
+          lapply(., function(x) {x > 1 & x < 100}) %>%
+          unlist %>% 
+          as.vector %>%
+          which
+
+        proficiency.df <- sapp.df.m[,c(grep("user_id", names(sapp.df.m)), intersect(proficiency.cols.v, sapp.cols.v))] %>% 
+          na.omit(.) %>% 
+          left_join(., users.df %>% select(user_id, school), by = "user_id")
+        
+        proficiency.df$proficiency <- proficiency.df[,grep(sapp.profile.names.v[2], names(proficiency.df))] %>%
+            apply(., 2, function(x) {x > 2}) %>% 
+            apply(., 1, sum) %>% 
+            divide_by(0.01*dim(proficiency.df[,grep(sapp.profile.names.v[2], names(proficiency.df))])[2])
+        
+        slide.data.df <- aggregate(proficiency ~ school, proficiency.df, mean)
+     
       
       # PPT SLIDE CREATION
-      pptx.m <- addSlide( pptx.m, slide.layout = 'S2')
-      
-      #Title
-      slide.title <- pot("Num. Responses by Profile",title.format)
-      pptx.m <- addParagraph(pptx.m, 
-                             slide.title, 
-                             height = 0.89,
-                             width = 8.47,
-                             offx = 0.83,
-                             offy = 0.85,
-                             par.properties=parProperties(text.align="left", padding=0)
-      )
-      
-      #Viz
-      
-      slide.graph <- ggplot(
-        data = slide.data.df, aes(x = school, y = n)) + 
+        pptx.m <- addSlide( pptx.m, slide.layout = 'S2')
         
-        #Horizontal line for district average
-        geom_hline(
-          yintercept = tot.slide.data.df %>% .[,2] %>% mean, #mean responses per school
-          linetype = "dashed",
-          color = graphlabelsgrey,
-          size = 0.9
-        ) +
-        
-        #Bar chart itself
-        geom_bar(
-          aes(fill = sapp), 
-          stat="identity", 
-          #fill = rep(purplegraphshade, length(slide.data.df$n)),  
-          width = 0.8) + 
-        
-        #Y axis labels
-        scale_y_continuous(
-          breaks = c(
-            seq(
-              0,
-              max(tot.slide.data.df$n), 
-              by = ifelse(max(slide.data.df$n) < 10, 1, round(max(tot.slide.data.df$n)/5,ifelse(max(tot.slide.data.df$n) > 100, -1, 0)))
-            ),
-            mean(tot.slide.data.df$n)
-          ),
-          label = c(
-            seq(
-              0,
-              max(tot.slide.data.df$n), 
-              by = ifelse(max(tot.slide.data.df$n) < 10, 1, round(max(tot.slide.data.df$n)/5,ifelse(max(tot.slide.data.df$n) > 100, -1, 0)))
-            ),
-            "District Avg."
-          )
-        ) +
-        
-        labs(x = "", y = "Num. Responses") +
-        
-        theme(panel.background = element_blank(),
-              panel.grid.major.y = element_line(color = graphgridlinesgrey),
-              panel.grid.major.x = element_blank(),
-              axis.text.x = element_text(size = 12, color = graphlabelsgrey, angle = 30, hjust = 0.95),
-              axis.text.y = element_text(size = 12, color = graphlabelsgrey),
-              axis.ticks = element_blank(),
-              legend.text = element_text(size = 12)
+        #Title
+        slide.title <- pot("ACL Proficiency",title.format)
+        pptx.m <- addParagraph(pptx.m, 
+                               slide.title, 
+                               height = 0.89,
+                               width = 8.47,
+                               offx = 0.83,
+                               offy = 0.5,
+                               par.properties=parProperties(text.align="left", padding=0)
         )
-      
-      slide.graph
-      
-      pptx.m <- addPlot(pptx.m,
-                        fun = print,
-                        x = slide.graph,
-                        height = 5,
-                        width = 8,
-                        offx = 0.8,
-                        offy = 2.16)
-      
+        
+        #Viz
+          slide.graph <- ggplot(
+          data = slide.data.df, aes(x = rev(school))) + 
+          
+          #Horizontal line for district average
+          geom_hline(
+            yintercept = mean(slide.data.df$proficiency),
+            linetype = "dashed",
+            color = graphlabelsgrey,
+            size = 0.9,
+            show.legend = TRUE
+          ) +
+          
+          #scale_linetype_manual(name = "District Average", values = 2, 
+          #                      guide = guide_legend(override.aes = list(color = graphlabelsgrey))) +
+          
+          #Y axis labels
+          scale_y_continuous(
+            breaks =  seq(0,100, by = 10),
+            label = seq(0,100, by= 10)
+          ) +
+          
+          #Bars
+          geom_bar(
+            aes(y = proficiency), 
+            stat="identity", 
+            fill = rep(purplegraphshade, length(slide.data.df$proficiency)),  
+            width = 0.8) + 
+          
+          labs(x = "", y = "% Responses Proficient") +
+          
+          
+          #Data labels inside base of columns
+          geom_text(
+            aes(                                                         
+              y = min(slide.data.df$proficiency)/2+2, 
+              label = slide.data.df$proficiency %>% round(., 1)
+            ), 
+            size = 4,
+            color = "white") + 
+          
+          theme(panel.background = element_blank(),
+                panel.grid.major.y = element_line(color = graphgridlinesgrey),
+                panel.grid.major.x = element_blank(),
+                axis.text.x = element_text(size = 12, color = graphlabelsgrey, angle = 30, hjust = 0.95),
+                axis.text.y = element_text(size = 12, color = graphlabelsgrey),
+                axis.ticks = element_blank()
+          )
+        
+        slide.graph
+        
+        pptx.m <- addPlot(pptx.m,
+                          fun = print,
+                          x = slide.graph,
+                          height = 5,
+                          width = 7.5-5/dim(slide.data.df)[1],
+                          offx = 4.5-(7.5-5/dim(slide.data.df)[1])/2,
+                          offy = 0.5+1)
+          
+      #District average legend
+        slide.legend.1 <- pot("- - - - - - -",
+                              textProperties(color = graphlabelsgrey, font.size = 30))
+        
+        pptx.m <- addParagraph(pptx.m,
+                               slide.legend.1,
+                               height = 1,
+                               width = 3,
+                               offx = 8,
+                               offy = 2.1,
+                               par.properties = parProperties(text.align ="left", padding = 0)
+        )
+        
+        slide.legend.2 <- pot("District average",
+                              textProperties(color = graphlabelsgrey, font.size = 12))
+        
+        pptx.m <- addParagraph(pptx.m,
+                               slide.legend.2,
+                               height = 1,
+                               width = 3,
+                               offx = 8,
+                               offy = 2.5,
+                               par.properties = parProperties(text.align ="left", padding = 0)
+        )
+        
       #Page number
-      pptx.m <- addPageNumber(pptx.m)
+        pptx.m <- addPageNumber(pptx.m)
       
       #Write slide
-      writeDoc(pptx.m, file = target.file.m) #test Slide build up to this point
-    }  
-  
+        writeDoc(pptx.m, file = target.file.m) #test Slide build up to this point
+    }
+   
+      
+      
   }  # END OF LOOP BY DISTRICT
   
 
