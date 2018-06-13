@@ -627,54 +627,63 @@ library(chron)
     if(dim(slide.data.df)[1] == 0){next()}else{}
   }  
   
-
-  #4  ### SLIDE ### PERFORMANCE - % PROFICIENT ACL
-    {  
-      # CALCULATIONS
-        sapp.name.slide <- sapp.profile.names.v[2] ########
+  ### SLIDES ### PERFORMANCE - % PROFICIENT ES
+      for(n in 1: length(sapp.profile.names.v)){  
+        # CALCULATIONS
+        sapp.name.slide <- sapp.profile.names.v[n] ########
         
-      if(sapp.df.m$sapp %in% sapp.name.slide %>% any %>% !.){}else{ #Skip calculations if no data for this profile
+        noviz.slide <- FALSE
+        
+        if(sapp.df.m$sapp %in% sapp.name.slide %>% any %>% !.){noviz.slide <- TRUE}else{ #Skip calculations if no data for this profile
           
-        sapp.cols.v <- grep(sapp.name.slide, names(sapp.df.m))
-        proficiency.cols.v <- sapp.df %>%           #! Right now just takes max answer and counts that as range of variable, but should actually refer to index of columns saying which variables to use to calculate
-          lapply(., function (x) x[!is.na(x)]) %>% 
-          lapply(., function(x) max(x)) %>%
-          lapply(., function(x) {x > 1 & x < 100}) %>%
-          unlist %>% 
-          as.vector %>%
-          which
-
-        proficiency.df <- sapp.df.m[order(sapp.df.m$created_datetime),
-                                      c(grep("user_id|created_datetime", names(sapp.df.m)), intersect(proficiency.cols.v, sapp.cols.v))] %>% 
-          na.omit(.) %>% 
-          left_join(., users.df %>% select(user_id, school), by = "user_id") %>%
-          group_by(user_id) %>%
-          slice(1) %>%
-          as.data.frame
+          sapp.cols.v <- grep(sapp.name.slide, names(sapp.df.m))
+          ordinal.cols.v <- sapp.df %>%           #! Right now just takes max answer and counts that as range of variable, but should actually refer to index of columns saying which variables to use to calculate
+            lapply(., function (x) x[!is.na(x)]) %>%  #! also open question of whether should include binary answers
+            lapply(., function(x) max(x)) %>%
+            lapply(., function(x) {x > 1 & x < 100}) %>%
+            unlist %>% 
+            as.vector %>%
+            which
+          
+          if(length(intersect(ordinal.cols.v,sapp.cols.v)) == 0){noviz.slide <- TRUE}else{
+            
+            proficiency.df <- sapp.df.m[order(sapp.df.m$created_datetime),
+                                        c(grep("user_id|created_datetime", names(sapp.df.m)), intersect(ordinal.cols.v, sapp.cols.v))] 
+            proficiency.df <- proficiency.df[proficiency.df[,3:(2+length(intersect(ordinal.cols.v, sapp.cols.v)))] %>% #subsets data frame into rows where there is at least one non-NA response
+                                               as.data.frame %>%
+                                               apply(., 1, function(x) any(!is.na(x))) %>% 
+                                               which,
+                                             ] %>% 
+                                left_join(., users.df %>% select(user_id, school), by = "user_id") %>%
+                                group_by(user_id) %>%
+                                slice(1) %>%
+                                as.data.frame
+            
+            if(dim(proficiency.df)[1] == 1){ #Creates variable for % of questions answered above 2 for each user on their last response
+              proficiency.df$proficiency <- proficiency.df[,grep(sapp.name.slide, names(proficiency.df))] %>% 
+                apply(., 2, function(x) {x > 2}) %>% 
+                as.data.frame %>%  
+                apply(., 2, sum) %>% 
+                divide_by(0.01*dim(proficiency.df[,grep(sapp.name.slide, names(proficiency.df))])[2])
+            }else{
+              proficiency.df$proficiency <- proficiency.df[,grep(sapp.name.slide, names(proficiency.df))] %>%
+                as.data.frame %>%
+                apply(., 2, function(x) {x > 2}) %>% 
+                apply(., 1, function(x) sum(x, na.rm = TRUE)) %>% 
+                divide_by(0.01*(grepl(sapp.name.slide, names(proficiency.df)) %>% sum))
+            }
+            
+            slide.data.df <- group_by(proficiency.df, school) %>% #Creates data frame of mean proficiency of most recent answer from each user in district
+              summarize(avg.proficiency = mean(proficiency)) %>% 
+              as.data.frame
+          } # end of if statement if no overlap between ordinal columns and sapp answer columns
+        } # end of if statement if no responses to this sapp in district
         
-        if(dim(proficiency.df)[1] == 1){ #Creates variable for % of questions answered above 2 for each user on their last response
-          proficiency.df$proficiency <- proficiency.df[,grep(sapp.name.slide, names(proficiency.df))] %>% 
-            apply(., 2, function(x) {x > 2}) %>% 
-            as.data.frame %>%  
-            apply(., 2, sum) %>% 
-            divide_by(0.01*dim(proficiency.df[,grep(sapp.profile.names.v[2], names(proficiency.df))])[2])
-        }else{
-          proficiency.df$proficiency <- proficiency.df[,grep(sapp.profile.names.v[2], names(proficiency.df))] %>%
-            apply(., 2, function(x) {x > 2}) %>% 
-            apply(., 1, sum) %>% 
-            divide_by(0.01*dim(proficiency.df[,grep(sapp.profile.names.v[2], names(proficiency.df))])[2])
-        }
-        
-        slide.data.df <- group_by(proficiency.df, school) %>% #Creates data frame of mean proficiency of most recent answer from each user in district
-          summarize(avg.proficiency = mean(proficiency)) %>% 
-          as.data.frame
-      }
-      
-      # PPT SLIDE CREATION
+        # PPT SLIDE CREATION
         pptx.m <- addSlide( pptx.m, slide.layout = 'S2')
         
         #Title
-        slide.title <- pot("ACL Proficiency",title.format)
+        slide.title <- pot(paste(toupper(sapp.name.slide)," Proficiency", sep = ""),title.format)
         pptx.m <- addParagraph(pptx.m, 
                                slide.title, 
                                height = 0.89,
@@ -685,28 +694,27 @@ library(chron)
         )
         
         #Viz
-          if(sapp.df.m$sapp %in% sapp.name.slide %>% any %>% !.){
-            
-            #If no responses in district
-            slide.notes <- pot(paste("No responses in district:",sapp.name.slide,sep = " "),
-                               textProperties(color = "black", font.size = 18))
-            
-            pptx.m <- addParagraph(pptx.m,
-                                   slide.notes,
-                                   height = 1,
-                                   width = 4,
-                                   offx = 10/2,
-                                   offy = 7.5/2,
-                                   par.properties = parProperties(text.align ="left", padding = 0)
-            )
-          }else{
-            
-            slide.graph <- ggplot(
-              data = slide.data.df, aes(x = rev(school))) + 
+        if(noviz.slide == TRUE){  
+          #If no responses in district
+          slide.notes <- pot(paste("No responses in district:",sapp.name.slide,sep = " "),
+                             textProperties(color = "black", font.size = 18))
+          
+          pptx.m <- addParagraph(pptx.m,
+                                 slide.notes,
+                                 height = 1,
+                                 width = 4,
+                                 offx = 10/2,
+                                 offy = 7.5/2,
+                                 par.properties = parProperties(text.align ="left", padding = 0)
+          )
+        }else{
+          
+          slide.graph <- ggplot(
+            data = slide.data.df, aes(x = rev(school))) + 
             
             #Horizontal line for district average
             geom_hline(
-              yintercept = mean(proficiency.df$avg.proficiency),
+              yintercept = mean(proficiency.df$proficiency),
               linetype = "dashed",
               color = graphlabelsgrey,
               size = 0.9,
@@ -755,8 +763,8 @@ library(chron)
                             width = 7.5-5/dim(slide.data.df)[1],
                             offx = 4.5-(7.5-5/dim(slide.data.df)[1])/2,
                             offy = 0.5+1)
-        
-        #District average legend
+          
+          #District average legend
           slide.legend.1 <- pot("- - - - - - -",
                                 textProperties(color = graphlabelsgrey, font.size = 30))
           
@@ -782,20 +790,16 @@ library(chron)
           )
         }
         
-      #Page number
+        #Page number
         pptx.m <- addPageNumber(pptx.m)
-      
-      #Write slide
+        
+        #Write slide
         writeDoc(pptx.m, file = target.file.m) #test Slide build up to this point
-    }
-   
       
-      
-  }  # END OF LOOP BY DISTRICT
+    } # END OF LOOP BY PROFILE
   
+  }     
 
-      
-      
       
       
       
