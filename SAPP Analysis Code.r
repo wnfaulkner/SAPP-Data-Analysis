@@ -706,7 +706,7 @@ library(chron)
             
             #Horizontal line for district average
             geom_hline(
-              yintercept = mean(slide.data.df$avg.proficiency),
+              yintercept = mean(proficiency.df$avg.proficiency),
               linetype = "dashed",
               color = graphlabelsgrey,
               size = 0.9,
@@ -802,8 +802,6 @@ library(chron)
 ##################################            
 ### EXPORT FINAL Data AS EXCEL ###
 { 
-  #Create unique folder for output
-   
   
   #Write .xlsx file with three sheets
     setwd(target.dir)
