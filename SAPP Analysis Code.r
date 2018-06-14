@@ -94,9 +94,6 @@ library(chron)
     buildings.df$building_code <- paste(buildings.df$cd_code,"_",buildings.df$school_codes,sep="")
     names(buildings.df)[names(buildings.df) == "id"] <- "building_id"
     
-    #buildings.df <- buildings.df[,!grepl("cd_code|school_codes",names(buildings.df))] %>%
-    #                  .[,c(length(names(.)),1:(length(names(.))-1))]
-    
   #IMPORT SAPP DATA AND STACK INTO SINGLE DATA FRAME
     
     sapp.profile.names.v <- c("acl","cdt","cfa","es","feedback","lead","metacog","rt","str")
@@ -199,7 +196,6 @@ library(chron)
           sapp.responses.duplicated.df.j$duplicated_timedif[sapp.responses.duplicated.df.j$same_sapp == FALSE] <- NA
           sapp.responses.duplicated.ls[[j]] <- sapp.responses.duplicated.df.j[,names(sapp.responses.duplicated.df.j) %in% c("response_id","duplicated_timedif")]
           
-          #sapp.df <- full_join(sapp.df, sapp.responses.duplicated.df.j, by = "response_id")
         }
         
       # Calculating pct.dif variable to guage if users answering differently each time
@@ -228,8 +224,6 @@ library(chron)
       
         users.df$pct.dif[j] <- pct.dif.responses.ls %>% unlist %>% mean(.)*100 #Calculation of final statistic: mean of percentage of answers that were different across all variables that the user responded to
         
-      #print(c(j,length(sapp.compare.v.j),users.df$pct.dif[j]))
-      
       setTxtProgressBar(progress.bar.j, 100*j/maxrow)
       
     } #END OF LOOP BY USER
@@ -267,7 +261,7 @@ library(chron)
   #aggregate(users.df$tot.num.responses, by = list(district=users.df$district), FUN=sum) #shows responses by district in full data
   
   # Template file copy
-  template.file <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2017-09 CWIS automation for MMD/Report Template/CWIS Template.pptx"
+  template.file <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/Report Template File/SAPP Report Template.pptx"
   target.dir <- paste("C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/R script outputs/",
                       "Output_",
                       gsub(":",".",Sys.time()), sep = "")
@@ -312,7 +306,7 @@ library(chron)
       options("ReporteRs-default-font" = "Calibri")
       
       layouts = slide.layouts(pptx.m)
-      layouts
+      
       for(k in layouts ){
         slide.layouts(pptx.m, k )
         title(sub = k )
@@ -328,8 +322,7 @@ library(chron)
       purplegraphshade <- "#402339"
       backgroundgreen <- "#94c132"
       subtextgreen <- "#929e78"
-      #notesgray <- rgb(131,130,105, maxColorValue=255)
-      
+
       #Text formatting
       title.format <- textProperties(color = titlegreen, font.size = 48, font.weight = "bold")
       title.format.small <- textProperties(color = titlegreen, font.size = 40, font.weight = "bold")
