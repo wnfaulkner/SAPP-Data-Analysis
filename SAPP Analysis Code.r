@@ -261,7 +261,7 @@ library(chron)
   #aggregate(users.df$tot.num.responses, by = list(district=users.df$district), FUN=sum) #shows responses by district in full data
   
   # Template file copy
-  template.file <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/Report Template File/SAPP Report Template.pptx"
+  template.file <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/Report Template File/SAPP Report Template_v2.pptx"
   target.dir <- paste("C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/R script outputs/",
                       "Output_",
                       gsub(":",".",Sys.time()), sep = "")
@@ -324,7 +324,7 @@ library(chron)
       subtextgreen <- "#929e78"
 
       #Text formatting
-      title.format <- textProperties(color = titlegreen, font.size = 48, font.weight = "bold")
+      title.format <- textProperties(color = purpleheader, font.size = 48, font.weight = "bold")
       title.format.small <- textProperties(color = titlegreen, font.size = 40, font.weight = "bold")
       subtitle.format <- textProperties(color = notesgrey, font.size = 28, font.weight = "bold")
       section.title.format <- textProperties(color = "white", font.size = 48, font.weight = "bold")
