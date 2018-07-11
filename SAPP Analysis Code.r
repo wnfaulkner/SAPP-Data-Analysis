@@ -11,6 +11,7 @@
 #install.packages("stringr")
 #install.packages("ReporteRs")
 #install.packages("xlsx")
+#install.packages("openxlsx")
 #install.packages("chron")
 
 ### INITIAL SETUP ###
@@ -33,13 +34,13 @@ library(chron)
 
 #########################
 ### LOAD & CLEAN DATA ###
-{
+#{
   #Set working directory
     #M900
-      working.dir <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis"
+      #working.dir <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis"
       
     #Thinkpad
-      #working.dir <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/"
+      working.dir <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/"
     
       
     source.dir <- paste(working.dir,"/Source Data/",sep="")
@@ -49,7 +50,7 @@ library(chron)
   #READ MOST RECENTLY MODIFIED EXCEL FILE INTO A WORKBOOK
     
     survey.data.xlsx <- list.files()[grepl(".xlsx",list.files()) & !grepl("analysis",list.files()) & !grepl(".gsheet",list.files())]
-    current.survey.file <- survey.data.xlsx[order(survey.data.xlsx %>% file.mtime, decreasing =  TRUE)][1]
+    current.survey.file <- survey.data.xlsx[order(survey.data.xlsx %>% file.mtime, decreasing =  TRUE)] %>% .[!grepl("r.output",.)] %>% .[1]
     
     wb <- loadWorkbook(current.survey.file)
     wb.sheetnames <- wb$sheet_names
