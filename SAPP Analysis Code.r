@@ -13,6 +13,7 @@
 #install.packages("xlsx")
 #install.packages("openxlsx")
 #install.packages("chron")
+#install.packages("ggplot2")
 
 ### INITIAL SETUP ###
 options(java.parameters = "- Xmx1024m")
@@ -34,12 +35,12 @@ library(chron)
 
 #########################
 ### LOAD & CLEAN DATA ###
-#{
+{
   #Set working directory
     #M900
       #working.dir <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis"
       
-    #Thinkpad
+    #Thinkpad T470
       working.dir <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/"
     
       
@@ -262,21 +263,23 @@ library(chron)
   #aggregate(users.df$tot.num.responses, by = list(district=users.df$district), FUN=sum) #shows responses by district in full data
   
   # Template file copy
-  template.file <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/Report Template File/SAPP Report Template_v2.pptx"
-  target.dir <- paste("C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/R script outputs/",
+  template.file <- paste(working.dir, "/Report Template File/SAPP Report Template_v2.pptx", sep = "")
+  target.dir <- paste(working.dir,"R script outputs/",
                       "Output_",
                       gsub(":",".",Sys.time()), sep = "")
   
   
   progress.bar.m <- txtProgressBar(min = 0, max = 100, style = 3)
   maxrow <- length(reporting.districts)
+  m.loop.check <- vector() #Helps avoid error that template file is only copied if m==1 and sometimes want it to be when testing loop and m != 5
+  
   #m <- 5 # for testing loop
   #for(m in 1:3){  # for testing loop
   
   for(m in 1:length(reporting.districts)){ # START OF LOOP BY DISTRICT
     
     setTxtProgressBar(progress.bar.m, 100*m/maxrow)      
-    
+    m.loop.check[m] <- m
     # Data & File Setup
     
       district.name.m <- reporting.districts[m]
@@ -288,7 +291,7 @@ library(chron)
       sapp.df.m <- sapp.df[sapp.df$user_id %in% users.df.m$user_id,]
       
     #Copy template file into target directory & rename with individual report name 
-      if(m == 1){
+      if((m!=1 && is.na(m.loop.check[m-1] == m-1)) | (m == 1 && !dir.exists(target.dir))){
         dir.create(target.dir)
       }
       
@@ -428,7 +431,8 @@ library(chron)
             geom_bar(
               aes(y = n), 
               stat="identity", 
-              fill = rep(purplegraphshade, length(slide.data.df$n)),  
+              fill = rep(purplegraphshade, length(slide.data.df$n)),
+              alpha = 0.8,
               width = 0.8) + 
             
             labs(x = "", y = "Num. Users") +
@@ -438,7 +442,7 @@ library(chron)
             geom_text(
               aes(                                                         
                 y = min(slide.data.df$n)/2+2, 
-                label = slide.data.df$n
+                label = paste(slide.data.df$n, "%", sep = "")
               ), 
               size = 4,
               color = "white") + 
@@ -558,7 +562,9 @@ library(chron)
         geom_bar(
           aes(fill = slide.data.df$sapp), 
           stat="identity", 
-          width = 0.8) + 
+          alpha = 0.8,
+          width = 0.8
+        ) + 
         
         #Y axis labels
         scale_y_continuous(
@@ -715,6 +721,9 @@ library(chron)
               show.legend = TRUE
             ) +
             
+            #Adjust Y axis limits
+            coord_cartesian(ylim=c(0,100)) +
+            
             #Y axis labels
             scale_y_continuous(
               breaks =  seq(0,100, by = 10),
@@ -726,6 +735,7 @@ library(chron)
               aes(y = avg.proficiency), 
               stat="identity", 
               fill = rep(purplegraphshade, length(slide.data.df$avg.proficiency)),  
+              alpha = 0.8,
               width = 0.8) + 
             
             labs(x = "", y = "% Responses Proficient") +
@@ -735,7 +745,7 @@ library(chron)
             geom_text(
               aes(                                                         
                 y = min(slide.data.df$avg.proficiency)/2+2, 
-                label = slide.data.df$avg.proficiency %>% round(., 1)
+                label = slide.data.df$avg.proficiency %>% round(., 0) %>% paste(., "%", sep = "")
               ), 
               size = 4,
               color = "white") + 
@@ -792,6 +802,41 @@ library(chron)
       
     } # END OF LOOP BY PROFILE
   
+  #FINAL  ### SLIDE ## DATA NOTES SLIDE
+    {
+      pptx.m <- addSlide( pptx.m, slide.layout = 'Title Slide', bookmark = 1)
+      
+      #Text itself - as "piece of text" (pot) objects
+      title.m <- pot(
+        "Self Assessment Practice Profile",
+        title.format
+      )
+      
+      districttitle.m <- pot(
+        paste("DISTRICT: ",district.name.m %>% toupper),
+        subtitle.format
+      )
+      
+      #Write Text into Slide
+      pptx.m <- addParagraph(pptx.m, #Title
+                             title.m, 
+                             height = 1.92,
+                             width = 7.76,
+                             offx = 1.27,
+                             offy = 2.78,
+                             par.properties=parProperties(text.align="left", padding=0)
+      )
+      
+      pptx.m <- addParagraph(pptx.m, #District
+                             districttitle.m, 
+                             height = 0.67,
+                             width = 7.76,
+                             offx = 1.27,
+                             offy = 4.65,
+                             par.properties=parProperties(text.align="left", padding=0)
+      )
+      writeDoc(pptx.m, file = target.file.m) #test Slide 1 build
+    }  
   }     
 
       
