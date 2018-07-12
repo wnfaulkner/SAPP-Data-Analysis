@@ -291,17 +291,13 @@ library(chron)
     
     ordinal.cols.v.s <- intersect(ordinal.cols.v, sapp.cols.v)
     binary.cols.v.s <- intersect(binary.cols.v, sapp.cols.v)
-    
-    #!proficiency.df.s <- sapp.df[order(sapp.df$created_datetime),]
-    #!                                c(grep("user_id|created_datetime", names(sapp.df)), ordinal.cols.v.s, binary.cols.v.s)] 
-    
+  
     #Subsets data frame into rows where there is at least one non-NA response
     proficiency.df.s <- sapp.df[
-                                  sapp.df[,grep(paste("user_id",sapp.name.s, sep = "|"), names(sapp.df))] %>% 
-                                    #as.data.frame %>%
+                                  sapp.df[,grep(sapp.name.s, names(sapp.df))] %>%
                                     apply(., 1, function(x) any(!is.na(x))), 
-                                    #which,
-                                  grep(sapp.name.s, names(sapp.df))] %>% 
+                                  grep(paste("user_id",sapp.name.s, sep = "|"), names(sapp.df))
+                                ] %>% 
       left_join(., users.df %>% select(user_id, school), by = "user_id") %>%
       group_by(user_id) %>%
       slice(1) %>%
@@ -309,35 +305,25 @@ library(chron)
     
     #Ordinal Columns proficiency - Create variable for % of questions answered above 2 for each user on their last response
     if(length(ordinal.cols.v.s) > 0){ 
-      proficiency.df.s$proficiency <- proficiency.df.s[,ordinal.cols.v.s] %>% 
+      proficiency.df.s$proficiency <- proficiency.df.s[,names(proficiency.df.s) %in% names(sapp.df)[ordinal.cols.v.s]] %>% 
         as.data.frame %>%
         apply(., 2, function(x) {x > 2}) %>% 
         as.data.frame %>%  
         apply(., 1, sum) %>% 
         divide_by(0.01*length(ordinal.cols.v.s))
     }else{
-      proficiency.df.s$proficiency <- proficiency.df.s[,binary.cols.v.s] %>% 
+    #Binary columns (only when have no ordinal columns), response is 'proficient' when 70% or more of column answers are 1  
+      proficiency.df.s$proficiency <- proficiency.df.s[,names(proficiency.df.s) %in% names(sapp.df)[binary.cols.v.s]] %>% 
         apply(., 2, function(x) {x > 0}) %>% 
         as.data.frame %>%  
         apply(., 1, sum) %>% 
         divide_by(0.01*length(binary.cols.v.s)) %>%
-        sapply(., function(x) {ifelse(x >= 70, 1, 0)})
-      #!proficiency.df.s$proficiency <- proficiency.df.s[,grep(sapp.name.s, names(proficiency.df.s))] %>%
-      #!  as.data.frame %>%
-      #!  apply(., 2, function(x) {x > 2}) %>% 
-      #!  apply(., 1, function(x) sum(x, na.rm = TRUE)) %>% 
-      #!  divide_by(0.01*(grepl(sapp.name.s, names(proficiency.df.s)) %>% sum))
+        sapply(., function(x) {ifelse(x >= 70, 100, 0)})
     }
     
     proficiency.df.state$avg.proficiency[s] <- proficiency.df.s$proficiency %>% mean(., na.rm = TRUE)
 
   }
-
-
-
-
-
-#aggregate(users.df$tot.num.responses, by = list(district=users.df$district), FUN=sum) #shows responses by district in full data
   
   # Template file copy
   template.file <- paste(working.dir, "/Report Template File/SAPP Report Template_v2.pptx", sep = "")
