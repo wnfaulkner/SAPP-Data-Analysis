@@ -41,10 +41,10 @@ library(chron)
       #working.dir <- "C:/Users/WNF/Google Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis"
       
     #Thinkpad T470
-      working.dir <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/2018-03 SAPP Analysis/"
+      working.dir <- "G:/My Drive/1. FLUX CONTRACTS - CURRENT/2016-09 Missouri Education/3. Missouri Education - GDRIVE/7. SAPP/2018-03 SAPP Analysis/"
     
       
-    source.dir <- paste(working.dir,"/Source Data/",sep="")
+    source.dir <- paste(working.dir,"Source Data/",sep="")
     
     setwd(source.dir)
   
@@ -260,7 +260,84 @@ library(chron)
   
   reporting.districts <- setdiff(users.df$district %>% unique, c(NA, "Test District"))[order(setdiff(users.df$district %>% unique, c(NA, "Test District")))]
   
-  #aggregate(users.df$tot.num.responses, by = list(district=users.df$district), FUN=sum) #shows responses by district in full data
+  #Calculations for proficiency slides, state averages
+  
+  proficiency.df.state <- data.frame(sapp = sapp.profile.names.v, avg.proficiency = "")
+  proficiency.df.state$avg.proficiency <- proficiency.df.state$avg.proficiency %>% as.character %>% as.numeric
+  
+  #Define ordinal columns
+    ordinal.cols.v <- sapp.df %>%           #! Right now just takes max answer and counts that as range of variable, but should actually refer to index of columns saying which variables to use to calculate
+      lapply(., function (x) x[!is.na(x)]) %>%  #! also open question of whether should include binary answers
+      lapply(., function(x) max(x)) %>%
+      lapply(., function(x) {x > 1 & x < 100}) %>%
+      unlist %>% 
+      as.vector %>%
+      which
+  
+  #Define binary columns
+    binary.cols.v <- sapp.df %>%           #! Right now just takes max answer and counts that as range of variable, but should actually refer to index of columns saying which variables to use to calculate
+      lapply(., function (x) x[!is.na(x)]) %>%  #! also open question of whether should include binary answers
+      lapply(., function(x) max(x)) %>%
+      lapply(., function(x) {x == 1}) %>%
+      unlist %>% 
+      as.vector %>%
+      which
+  
+  for(s in 1:length(sapp.profile.names.v)){
+    
+    sapp.name.s <- sapp.profile.names.v[s] #abbreviated name of profile for loop
+    
+    sapp.cols.v <- grep(sapp.name.s, names(sapp.df)) #index vector for columns with abbrevated name of profile in this loop
+    
+    ordinal.cols.v.s <- intersect(ordinal.cols.v, sapp.cols.v)
+    binary.cols.v.s <- intersect(binary.cols.v, sapp.cols.v)
+    
+    #!proficiency.df.s <- sapp.df[order(sapp.df$created_datetime),]
+    #!                                c(grep("user_id|created_datetime", names(sapp.df)), ordinal.cols.v.s, binary.cols.v.s)] 
+    
+    #Subsets data frame into rows where there is at least one non-NA response
+    proficiency.df.s <- sapp.df[
+                                  sapp.df[,grep(paste("user_id",sapp.name.s, sep = "|"), names(sapp.df))] %>% 
+                                    #as.data.frame %>%
+                                    apply(., 1, function(x) any(!is.na(x))), 
+                                    #which,
+                                  grep(sapp.name.s, names(sapp.df))] %>% 
+      left_join(., users.df %>% select(user_id, school), by = "user_id") %>%
+      group_by(user_id) %>%
+      slice(1) %>%
+      as.data.frame
+    
+    #Ordinal Columns proficiency - Create variable for % of questions answered above 2 for each user on their last response
+    if(length(ordinal.cols.v.s) > 0){ 
+      proficiency.df.s$proficiency <- proficiency.df.s[,ordinal.cols.v.s] %>% 
+        as.data.frame %>%
+        apply(., 2, function(x) {x > 2}) %>% 
+        as.data.frame %>%  
+        apply(., 1, sum) %>% 
+        divide_by(0.01*length(ordinal.cols.v.s))
+    }else{
+      proficiency.df.s$proficiency <- proficiency.df.s[,binary.cols.v.s] %>% 
+        apply(., 2, function(x) {x > 0}) %>% 
+        as.data.frame %>%  
+        apply(., 1, sum) %>% 
+        divide_by(0.01*length(binary.cols.v.s)) %>%
+        sapply(., function(x) {ifelse(x >= 70, 1, 0)})
+      #!proficiency.df.s$proficiency <- proficiency.df.s[,grep(sapp.name.s, names(proficiency.df.s))] %>%
+      #!  as.data.frame %>%
+      #!  apply(., 2, function(x) {x > 2}) %>% 
+      #!  apply(., 1, function(x) sum(x, na.rm = TRUE)) %>% 
+      #!  divide_by(0.01*(grepl(sapp.name.s, names(proficiency.df.s)) %>% sum))
+    }
+    
+    proficiency.df.state$avg.proficiency[s] <- proficiency.df.s$proficiency %>% mean(., na.rm = TRUE)
+
+  }
+
+
+
+
+
+#aggregate(users.df$tot.num.responses, by = list(district=users.df$district), FUN=sum) #shows responses by district in full data
   
   # Template file copy
   template.file <- paste(working.dir, "/Report Template File/SAPP Report Template_v2.pptx", sep = "")
@@ -274,9 +351,9 @@ library(chron)
   m.loop.check <- vector() #Helps avoid error that template file is only copied if m==1 and sometimes want it to be when testing loop and m != 5
   
   #m <- 5 # for testing loop
-  #for(m in 1:3){  # for testing loop
+  for(m in 1:10){  # for testing loop
   
-  for(m in 1:length(reporting.districts)){ # START OF LOOP BY DISTRICT
+  #for(m in 1:length(reporting.districts)){ # START OF LOOP BY DISTRICT
     
     setTxtProgressBar(progress.bar.m, 100*m/maxrow)      
     m.loop.check[m] <- m
@@ -288,7 +365,7 @@ library(chron)
 
       buildings.df.m <- buildings.df[buildings.df$building_id %in% users.df.m$building_id,]
       
-      sapp.df.m <- sapp.df[sapp.df$user_id %in% users.df.m$user_id,]
+      sapp.df <- sapp.df[sapp.df$user_id %in% users.df.m$user_id,]
       
     #Copy template file into target directory & rename with individual report name 
       if((m!=1 && is.na(m.loop.check[m-1] == m-1)) | (m == 1 && !dir.exists(target.dir))){
@@ -410,9 +487,6 @@ library(chron)
               show.legend = TRUE
             ) +
             
-            #scale_linetype_manual(name = "District Average", values = 2, 
-            #                      guide = guide_legend(override.aes = list(color = graphlabelsgrey))) +
-            
             #Y axis labels
             scale_y_continuous(
               breaks =  seq(
@@ -424,7 +498,7 @@ library(chron)
                         0,
                         max(slide.data.df$n), 
                         by = ifelse(max(slide.data.df$n) < 10, 1, round(max(slide.data.df$n)/5,ifelse(max(slide.data.df$n) > 100, -1, 0)))
-                      ),
+                      )
             ) +
             
             #Bars
@@ -450,7 +524,7 @@ library(chron)
               theme(panel.background = element_blank(),
                     panel.grid.major.y = element_line(color = graphgridlinesgrey),
                     panel.grid.major.x = element_blank(),
-                    axis.text.x = element_text(size = 12, color = graphlabelsgrey, angle = 30, hjust = 0.95),
+                    axis.text.x = element_text(size = 12, color = graphlabelsgrey, angle = ifelse(dim(slide.data.df)[1] == 1,0,30), hjust = 0.95),
                     axis.text.y = element_text(size = 12, color = graphlabelsgrey),
                     axis.ticks = element_blank()
               )
@@ -550,9 +624,17 @@ library(chron)
       slide.graph <- ggplot(
         data = slide.data.df, aes(x = school, y = n, group = sapp, color = sapp)) + 
         
-        #Horizontal line for district average
+        #Horizontal line for district average (dark grey)
         geom_hline(
           yintercept = tot.slide.data.df %>% .[,2] %>% mean, #mean responses per school
+          linetype = "dashed",
+          color = graphlabelsgrey,
+          size = 0.9
+        ) +
+        
+        #Horizontal line for state average
+        geom_hline(
+          yintercept =  %>% .[,2] %>% mean, #mean responses per school
           linetype = "dashed",
           color = graphlabelsgrey,
           size = 0.9
@@ -587,7 +669,7 @@ library(chron)
         theme(panel.background = element_blank(),
               panel.grid.major.y = element_line(color = graphgridlinesgrey),
               panel.grid.major.x = element_blank(),
-              axis.text.x = element_text(size = 12, color = graphlabelsgrey, angle = 30, hjust = 0.95),
+              axis.text.x = element_text(size = 12, color = graphlabelsgrey, angle = ifelse(length(unique(slide.data.df$school)) == 1,0,30), hjust = 0.95),
               axis.text.y = element_text(size = 12, color = graphlabelsgrey),
               axis.ticks = element_blank(),
               #legend.title = element_text("SAPP"),
@@ -627,7 +709,7 @@ library(chron)
     if(dim(slide.data.df)[1] == 0){next()}else{}
   }  
   
-  ### SLIDES ### PERFORMANCE - % PROFICIENT ES
+  ### SLIDES ### PERFORMANCE - % PROFICIENT 
       for(n in 1: length(sapp.profile.names.v)){  
         # CALCULATIONS
         sapp.name.slide <- sapp.profile.names.v[n] ########
@@ -678,6 +760,8 @@ library(chron)
               as.data.frame
           } # end of if statement if no overlap between ordinal columns and sapp answer columns
         } # end of if statement if no responses to this sapp in district
+        
+        sapp.fd sapp.df$sapp %in% sapp.name.slide
         
         # PPT SLIDE CREATION
         pptx.m <- addSlide( pptx.m, slide.layout = 'S2')
@@ -753,7 +837,7 @@ library(chron)
             theme(panel.background = element_blank(),
                   panel.grid.major.y = element_line(color = graphgridlinesgrey),
                   panel.grid.major.x = element_blank(),
-                  axis.text.x = element_text(size = 12, color = graphlabelsgrey, angle = 30, hjust = 0.95),
+                  axis.text.x = element_text(size = 12, color = graphlabelsgrey, angle = ifelse(dim(slide.data.df)[1] == 1,0,30), hjust = 0.95),
                   axis.text.y = element_text(size = 12, color = graphlabelsgrey),
                   axis.ticks = element_blank()
             )
@@ -804,37 +888,20 @@ library(chron)
   
   #FINAL  ### SLIDE ## DATA NOTES SLIDE
     {
-      pptx.m <- addSlide( pptx.m, slide.layout = 'Title Slide', bookmark = 1)
+      # PPT SLIDE CREATION
+      pptx.m <- addSlide( pptx.m, slide.layout = 'S2')
       
-      #Text itself - as "piece of text" (pot) objects
-      title.m <- pot(
-        "Self Assessment Practice Profile",
-        title.format
-      )
-      
-      districttitle.m <- pot(
-        paste("DISTRICT: ",district.name.m %>% toupper),
-        subtitle.format
-      )
-      
-      #Write Text into Slide
-      pptx.m <- addParagraph(pptx.m, #Title
-                             title.m, 
-                             height = 1.92,
-                             width = 7.76,
-                             offx = 1.27,
-                             offy = 2.78,
+      #Title
+      slide.title <- pot("Data Notes",title.format)
+      pptx.m <- addParagraph(pptx.m, 
+                             slide.title, 
+                             height = 0.89,
+                             width = 8.47,
+                             offx = 0.83,
+                             offy = 0.85,
                              par.properties=parProperties(text.align="left", padding=0)
       )
       
-      pptx.m <- addParagraph(pptx.m, #District
-                             districttitle.m, 
-                             height = 0.67,
-                             width = 7.76,
-                             offx = 1.27,
-                             offy = 4.65,
-                             par.properties=parProperties(text.align="left", padding=0)
-      )
       writeDoc(pptx.m, file = target.file.m) #test Slide 1 build
     }  
   }     
