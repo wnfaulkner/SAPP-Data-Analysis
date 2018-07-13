@@ -332,12 +332,13 @@ library(chron)
                       gsub(":",".",Sys.time()), sep = "")
   
   
+  #Loop for creating powerpoint slides by district
   progress.bar.m <- txtProgressBar(min = 0, max = 100, style = 3)
   maxrow <- length(reporting.districts)
   m.loop.check <- vector() #Helps avoid error that template file is only copied if m==1 and sometimes want it to be when testing loop and m != 5
   
-  #m <- 5 # for testing loop
-  for(m in 1:10){  # for testing loop
+  m <- 1 # for testing loop
+  #for(m in 1:10){  # for testing loop
   
   #for(m in 1:length(reporting.districts)){ # START OF LOOP BY DISTRICT
     
@@ -351,7 +352,7 @@ library(chron)
 
       buildings.df.m <- buildings.df[buildings.df$building_id %in% users.df.m$building_id,]
       
-      sapp.df <- sapp.df[sapp.df$user_id %in% users.df.m$user_id,]
+      sapp.df.m <- sapp.df[sapp.df$user_id %in% users.df.m$user_id,]
       
     #Copy template file into target directory & rename with individual report name 
       if((m!=1 && is.na(m.loop.check[m-1] == m-1)) | (m == 1 && !dir.exists(target.dir))){
@@ -606,7 +607,10 @@ library(chron)
     )
     
     #Viz
+    
+    
     if(dim(slide.data.df)[1] > 0){
+      print(dim(slide.data.df)[1] > 0)
       slide.graph <- ggplot(
         data = slide.data.df, aes(x = school, y = n, group = sapp, color = sapp)) + 
         
@@ -620,7 +624,7 @@ library(chron)
         
         #Horizontal line for state average
         geom_hline(
-          yintercept =  %>% .[,2] %>% mean, #mean responses per school
+          yintercept =  tot.slide.data.df %>% .[,2] %>% mean, #mean responses per school
           linetype = "dashed",
           color = graphlabelsgrey,
           size = 0.9
@@ -697,6 +701,7 @@ library(chron)
   
   ### SLIDES ### PERFORMANCE - % PROFICIENT 
       for(n in 1: length(sapp.profile.names.v)){  
+        
         # CALCULATIONS
         sapp.name.slide <- sapp.profile.names.v[n] ########
         
@@ -747,7 +752,54 @@ library(chron)
           } # end of if statement if no overlap between ordinal columns and sapp answer columns
         } # end of if statement if no responses to this sapp in district
         
-        sapp.fd sapp.df$sapp %in% sapp.name.slide
+        sapp.df <- sapp.df$sapp %in% sapp.name.slide
+        
+        
+        
+        #######################
+        
+        
+        sapp.name.n <- sapp.profile.names.v[s] #abbreviated name of profile for loop
+        
+        sapp.cols.v.n <- grep(sapp.name.n, names(sapp.df)) #index vector for columns with abbrevated name of profile in this loop
+        
+        ordinal.cols.v.n <- intersect(ordinal.cols.v, sapp.cols.v.n)
+        binary.cols.v.n <- intersect(binary.cols.v, sapp.cols.v.n)
+        
+        #Subsets data frame into rows where there is at least one non-NA response
+        proficiency.df.s <- sapp.df[
+          sapp.df[,grep(sapp.name.s, names(sapp.df))] %>%
+            apply(., 1, function(x) any(!is.na(x))), 
+          grep(paste("user_id",sapp.name.s, sep = "|"), names(sapp.df))
+          ] %>% 
+          left_join(., users.df %>% select(user_id, school), by = "user_id") %>%
+          group_by(user_id) %>%
+          slice(1) %>%
+          as.data.frame
+        
+        #Ordinal Columns proficiency - Create variable for % of questions answered above 2 for each user on their last response
+        if(length(ordinal.cols.v.s) > 0){ 
+          proficiency.df.s$proficiency <- proficiency.df.s[,names(proficiency.df.s) %in% names(sapp.df)[ordinal.cols.v.s]] %>% 
+            as.data.frame %>%
+            apply(., 2, function(x) {x > 2}) %>% 
+            as.data.frame %>%  
+            apply(., 1, sum) %>% 
+            divide_by(0.01*length(ordinal.cols.v.s))
+        }else{
+          #Binary columns (only when have no ordinal columns), response is 'proficient' when 70% or more of column answers are 1  
+          proficiency.df.s$proficiency <- proficiency.df.s[,names(proficiency.df.s) %in% names(sapp.df)[binary.cols.v.s]] %>% 
+            apply(., 2, function(x) {x > 0}) %>% 
+            as.data.frame %>%  
+            apply(., 1, sum) %>% 
+            divide_by(0.01*length(binary.cols.v.s)) %>%
+            sapply(., function(x) {ifelse(x >= 70, 100, 0)})
+        }
+        
+        
+        
+        
+        #######################
+        
         
         # PPT SLIDE CREATION
         pptx.m <- addSlide( pptx.m, slide.layout = 'S2')
