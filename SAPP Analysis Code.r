@@ -283,7 +283,8 @@ library(chron)
       as.vector %>%
       which
   
-  for(s in 1:length(sapp.profile.names.v)){
+  #Make new data frame with state averages for each profile
+    for(s in 1:length(sapp.profile.names.v)){
     
     sapp.name.s <- sapp.profile.names.v[s] #abbreviated name of profile for loop
     
@@ -337,13 +338,14 @@ library(chron)
   maxrow <- length(reporting.districts)
   m.loop.check <- vector() #Helps avoid error that template file is only copied if m==1 and sometimes want it to be when testing loop and m != 5
   
-  m <- 1 # for testing loop
+  m <- 2 # for testing loop
   #for(m in 1:10){  # for testing loop
   
   #for(m in 1:length(reporting.districts)){ # START OF LOOP BY DISTRICT
     
     setTxtProgressBar(progress.bar.m, 100*m/maxrow)      
     m.loop.check[m] <- m
+    
     # Data & File Setup
     
       district.name.m <- reporting.districts[m]
@@ -592,6 +594,8 @@ library(chron)
       names(tot.slide.data.df) <- c("Group","n")
     }else{}
     
+    responses.by.sapp <-  aggregate(n~sapp, data = slide.data.df, sum)  
+    
     # PPT SLIDE CREATION
     pptx.m <- addSlide( pptx.m, slide.layout = 'S2')
     
@@ -607,8 +611,6 @@ library(chron)
     )
     
     #Viz
-    
-    
     if(dim(slide.data.df)[1] > 0){
       print(dim(slide.data.df)[1] > 0)
       slide.graph <- ggplot(
@@ -702,99 +704,108 @@ library(chron)
   ### SLIDES ### PERFORMANCE - % PROFICIENT 
       for(n in 1: length(sapp.profile.names.v)){  
         
-        # CALCULATIONS
-        sapp.name.slide <- sapp.profile.names.v[n] ########
+       # CALCULATIONS
+        {
+        #sapp.name.n <- sapp.profile.names.v[n] ########
+        
+        #noviz.slide <- FALSE
+        
+        #if(sapp.df.m$sapp %in% sapp.name.n %>% any %>% !.){noviz.slide <- TRUE}else{ #Skip calculations if no data for this profile
+          
+         # sapp.cols.v <- grep(sapp.name.n, names(sapp.df.m))
+          #ordinal.cols.v <- sapp.df %>%           #! Right now just takes max answer and counts that as range of variable, but should actually refer to index of columns saying which variables to use to calculate
+           # lapply(., function (x) x[!is.na(x)]) %>%  #! also open question of whether should include binary answers
+            #lapply(., function(x) max(x)) %>%
+            #lapply(., function(x) {x > 1 & x < 100}) %>%
+            #unlist %>% 
+            #as.vector %>%
+            #which
+          
+          #if(length(intersect(ordinal.cols.v,sapp.cols.v)) == 0){noviz.slide <- TRUE}else{
+            
+          #  proficiency.df.n <- sapp.df.m[order(sapp.df.m$created_datetime),
+          #                              c(grep("user_id|created_datetime", names(sapp.df.m)), intersect(ordinal.cols.v, sapp.cols.v))] 
+          #  proficiency.df.n <- proficiency.df.n[proficiency.df.n[,3:(2+length(intersect(ordinal.cols.v, sapp.cols.v)))] %>% #subsets data frame into rows where there is at least one non-NA response
+          #                                     as.data.frame %>%
+          #                                     apply(., 1, function(x) any(!is.na(x))) %>% 
+          #                                     which,
+          #                                   ] %>% 
+          #                      left_join(., users.df %>% select(user_id, school), by = "user_id") %>%
+          #                      group_by(user_id) %>%
+          #                      slice(1) %>%
+          #                      as.data.frame
+            
+          # if(dim(proficiency.df.n)[1] == 1){ #Creates variable for % of questions answered above 2 for each user on their last response
+          #    proficiency.df.n$proficiency <- proficiency.df.n[,grep(sapp.name.n, names(proficiency.df.n))] %>% 
+          #      apply(., 2, function(x) {x > 2}) %>% 
+          #      as.data.frame %>%  
+          #      apply(., 2, sum) %>% 
+          #      divide_by(0.01*dim(proficiency.df.n[,grep(sapp.name.n, names(proficiency.df.n))])[2])
+          #  }else{
+          #    proficiency.df.n$proficiency <- proficiency.df.n[,grep(sapp.name.n, names(proficiency.df.n))] %>%
+          #      as.data.frame %>%
+          #      apply(., 2, function(x) {x > 2}) %>% 
+          #      apply(., 1, function(x) sum(x, na.rm = TRUE)) %>% 
+          #      divide_by(0.01*(grepl(sapp.name.n, names(proficiency.df.n)) %>% sum))
+          #  }
+            
+          #  slide.data.df <- group_by(proficiency.df.n, school) %>% #Creates data frame of mean proficiency of most recent answer from each user in district
+          #    summarize(avg.proficiency = mean(proficiency)) %>% 
+          #    as.data.frame
+          #} # end of if statement if no overlap between ordinal columns and sapp answer columns
+        #} # end of if statement if no responses to this sapp in district
+        
+       # sapp.df <- sapp.df$sapp %in% sapp.name.n
+       } #old code
         
         noviz.slide <- FALSE
         
-        if(sapp.df.m$sapp %in% sapp.name.slide %>% any %>% !.){noviz.slide <- TRUE}else{ #Skip calculations if no data for this profile
-          
-          sapp.cols.v <- grep(sapp.name.slide, names(sapp.df.m))
-          ordinal.cols.v <- sapp.df %>%           #! Right now just takes max answer and counts that as range of variable, but should actually refer to index of columns saying which variables to use to calculate
-            lapply(., function (x) x[!is.na(x)]) %>%  #! also open question of whether should include binary answers
-            lapply(., function(x) max(x)) %>%
-            lapply(., function(x) {x > 1 & x < 100}) %>%
-            unlist %>% 
-            as.vector %>%
-            which
-          
-          if(length(intersect(ordinal.cols.v,sapp.cols.v)) == 0){noviz.slide <- TRUE}else{
-            
-            proficiency.df <- sapp.df.m[order(sapp.df.m$created_datetime),
-                                        c(grep("user_id|created_datetime", names(sapp.df.m)), intersect(ordinal.cols.v, sapp.cols.v))] 
-            proficiency.df <- proficiency.df[proficiency.df[,3:(2+length(intersect(ordinal.cols.v, sapp.cols.v)))] %>% #subsets data frame into rows where there is at least one non-NA response
-                                               as.data.frame %>%
-                                               apply(., 1, function(x) any(!is.na(x))) %>% 
-                                               which,
-                                             ] %>% 
-                                left_join(., users.df %>% select(user_id, school), by = "user_id") %>%
-                                group_by(user_id) %>%
-                                slice(1) %>%
-                                as.data.frame
-            
-            if(dim(proficiency.df)[1] == 1){ #Creates variable for % of questions answered above 2 for each user on their last response
-              proficiency.df$proficiency <- proficiency.df[,grep(sapp.name.slide, names(proficiency.df))] %>% 
-                apply(., 2, function(x) {x > 2}) %>% 
-                as.data.frame %>%  
-                apply(., 2, sum) %>% 
-                divide_by(0.01*dim(proficiency.df[,grep(sapp.name.slide, names(proficiency.df))])[2])
-            }else{
-              proficiency.df$proficiency <- proficiency.df[,grep(sapp.name.slide, names(proficiency.df))] %>%
-                as.data.frame %>%
-                apply(., 2, function(x) {x > 2}) %>% 
-                apply(., 1, function(x) sum(x, na.rm = TRUE)) %>% 
-                divide_by(0.01*(grepl(sapp.name.slide, names(proficiency.df)) %>% sum))
-            }
-            
-            slide.data.df <- group_by(proficiency.df, school) %>% #Creates data frame of mean proficiency of most recent answer from each user in district
-              summarize(avg.proficiency = mean(proficiency)) %>% 
-              as.data.frame
-          } # end of if statement if no overlap between ordinal columns and sapp answer columns
-        } # end of if statement if no responses to this sapp in district
-        
-        sapp.df <- sapp.df$sapp %in% sapp.name.slide
-        
-        
-        
-        #######################
-        
-        
-        sapp.name.n <- sapp.profile.names.v[s] #abbreviated name of profile for loop
+        sapp.name.n <- sapp.profile.names.v[n] #abbreviated name of profile for loop
         
         sapp.cols.v.n <- grep(sapp.name.n, names(sapp.df)) #index vector for columns with abbrevated name of profile in this loop
         
-        ordinal.cols.v.n <- intersect(ordinal.cols.v, sapp.cols.v.n)
-        binary.cols.v.n <- intersect(binary.cols.v, sapp.cols.v.n)
-        
-        #Subsets data frame into rows where there is at least one non-NA response
-        proficiency.df.s <- sapp.df[
-          sapp.df[,grep(sapp.name.s, names(sapp.df))] %>%
-            apply(., 1, function(x) any(!is.na(x))), 
-          grep(paste("user_id",sapp.name.s, sep = "|"), names(sapp.df))
-          ] %>% 
-          left_join(., users.df %>% select(user_id, school), by = "user_id") %>%
-          group_by(user_id) %>%
-          slice(1) %>%
-          as.data.frame
-        
-        #Ordinal Columns proficiency - Create variable for % of questions answered above 2 for each user on their last response
-        if(length(ordinal.cols.v.s) > 0){ 
-          proficiency.df.s$proficiency <- proficiency.df.s[,names(proficiency.df.s) %in% names(sapp.df)[ordinal.cols.v.s]] %>% 
-            as.data.frame %>%
-            apply(., 2, function(x) {x > 2}) %>% 
-            as.data.frame %>%  
-            apply(., 1, sum) %>% 
-            divide_by(0.01*length(ordinal.cols.v.s))
-        }else{
+        if(sapp.df.m$sapp %in% sapp.name.n %>% any %>% !.){noviz.slide <- TRUE}else{} #Skip calculations if no data for this profile
+          
+        if(sapp.df.m$sapp %in% sapp.name.n %>% any){
+          
+          ordinal.cols.v.n <- intersect(ordinal.cols.v, sapp.cols.v.n)
+          binary.cols.v.n <- intersect(binary.cols.v, sapp.cols.v.n)
+          
+          #Subsets data frame into rows where there is at least one non-NA response
+          #! something going wrong here
+          proficiency.df.n <- sapp.df.m[
+            sapp.df.m[,sapp.cols.v.n] %>%                        #condition for selecting rows based on where there is at least one non-NA response to this profile
+              apply(., 1, function(x) any(!is.na(x))), 
+            grep(paste("user_id","created_datetime","duplicated_timedif",sapp.name.n, sep = "|"), names(sapp.df.m)) #condition for subsetting columns
+            ] %>% 
+            left_join(., users.df %>% select(user_id, school), by = "user_id") %>% #rejoin subsetted data frame with school variable
+            group_by(user_id) %>% slice(which.max(created_datetime)) %>% #select most recent response from each user
+            as.data.frame
+          
+          #Ordinal Columns proficiency - Create variable for % of questions answered above 2 for each user on their last response
+          #if(length(ordinal.cols.v.n) > 0){ 
+            #proficiency.df.n$proficiency <- proficiency.df.n[,names(proficiency.df.n) %in% names(sapp.df.m)[ordinal.cols.v.n]] %>% 
+            #  as.data.frame %>%
+            #  apply(., 2, function(x) {x > 2}) %>% 
+            #  as.data.frame %>%  
+            #  apply(., 1, sum) %>% 
+            #  divide_by(0.01*length(ordinal.cols.v.n))
+          #}else{
+          
           #Binary columns (only when have no ordinal columns), response is 'proficient' when 70% or more of column answers are 1  
-          proficiency.df.s$proficiency <- proficiency.df.s[,names(proficiency.df.s) %in% names(sapp.df)[binary.cols.v.s]] %>% 
+          proficiency.df.n$proficiency <- proficiency.df.n[,names(proficiency.df.n) %in% names(sapp.df.m)[binary.cols.v.n]] %>% 
             apply(., 2, function(x) {x > 0}) %>% 
             as.data.frame %>%  
             apply(., 1, sum) %>% 
-            divide_by(0.01*length(binary.cols.v.s)) %>%
+            divide_by(0.01*length(binary.cols.v.n)) %>%
             sapply(., function(x) {ifelse(x >= 70, 100, 0)})
-        }
-        
+          #}
+          
+          #Create data frame of mean proficiency of most recent answer from each user in district
+          slide.data.df <- group_by(proficiency.df.n, school) %>% 
+            summarize(avg.proficiency = mean(proficiency)) %>% 
+            as.data.frame
+        }else{}
         
         
         
@@ -805,7 +816,7 @@ library(chron)
         pptx.m <- addSlide( pptx.m, slide.layout = 'S2')
         
         #Title
-        slide.title <- pot(paste(toupper(sapp.name.slide)," Proficiency", sep = ""),title.format)
+        slide.title <- pot(paste(toupper(sapp.name.n)," Proficiency", sep = ""),title.format)
         pptx.m <- addParagraph(pptx.m, 
                                slide.title, 
                                height = 0.89,
@@ -818,7 +829,7 @@ library(chron)
         #Viz
         if(noviz.slide == TRUE){  
           #If no responses in district
-          slide.notes <- pot(paste("No responses in district:",sapp.name.slide,sep = " "),
+          slide.notes <- pot(paste("No responses in district:",sapp.name.n,sep = " "),
                              textProperties(color = "black", font.size = 18))
           
           pptx.m <- addParagraph(pptx.m,
@@ -836,7 +847,7 @@ library(chron)
             
             #Horizontal line for district average
             geom_hline(
-              yintercept = mean(proficiency.df$proficiency),
+              yintercept = mean(proficiency.df.n$proficiency),
               linetype = "dashed",
               color = graphlabelsgrey,
               size = 0.9,
