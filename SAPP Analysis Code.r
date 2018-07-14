@@ -164,11 +164,10 @@ library(chron)
       )
       
       sapp.ans.colnums.v <-  grep(paste(sapp.profile.names.v,collapse = "|"),names(sapp.df))
-      sapp.colnames.v <- names(sapp.df)[sapp.ans.colnums.v]
+      sapp.ans.colnames.v <- names(sapp.df)[sapp.ans.colnums.v]
       non.sapp.colnums.v <- c(1:length(names(sapp.df))) %>% setdiff(.,sapp.ans.colnums.v)
       non.sapp.colnames.v <- names(sapp.df)[c(1:length(names(sapp.df))) %>% setdiff(.,sapp.ans.colnums.v)]
-      
-  
+    
   #CALCULATE PERCENT ANSWERS THE SAME (& OTHER USEFUL USER STATISTICS)
   
     sapp.responses.duplicated.ls <- list()
@@ -251,7 +250,7 @@ library(chron)
     #Create frequency to determine shape of distribution
       #timediff.cuts <- seq(min(sapp.df$duplicated_timedif),max(sapp.df$duplicated_timedif), 10)
     
-    #Eliminate dublicate responses less than 24hrs (86,400 seconds) apart
+    #Eliminate duplicate responses less than 24hrs (86,400 seconds) apart
       sapp.df <- sapp.df[sapp.df$duplicated_timedif > 86400 | is.na(sapp.df$duplicated_timedif),]
     
     #Changining variable classes for certain columns
@@ -353,32 +352,40 @@ for(m in 1:length(reporting.districts)){ # START OF LOOP BY DISTRICT
   setTxtProgressBar(progress.bar.m, 100*m/maxrow)      
   m.loop.check[m] <- m
   
-  # Data & File Setup
+  #Data & File Setup
   
-  district.name.m <- reporting.districts[m]
+    district.name.m <- reporting.districts[m]
+    
+    users.df.m <- users.df[which(users.df$district == district.name.m & users.df$test.user == FALSE),]
+    
+    buildings.df.m <- buildings.df[buildings.df$building_id %in% users.df.m$building_id,]
+    
+    sapp.df.m <- sapp.df[sapp.df$user_id %in% users.df.m$user_id,]
   
-  users.df.m <- users.df[which(users.df$district == district.name.m & users.df$test.user == FALSE),]
-  
-  buildings.df.m <- buildings.df[buildings.df$building_id %in% users.df.m$building_id,]
-  
-  sapp.df.m <- sapp.df[sapp.df$user_id %in% users.df.m$user_id,]
-  
+  #Make NA answers into 0, remove any lines that are all 0
+    #for(k in 1: length(sapp.profile.names.v)){  
+    #  sapp.name.k <- sapp.profile.names.v[k] #abbreviated name of profile for loop
+    #  sapp.cols.v.k <- grep(sapp.name.k, names(sapp.df.m)) #index vector for columns with abbrevated name of profile in this loop
+    #  sapp.df.k <- sapp.df.m[,c(grep("response_id",names(sapp.df.m)),sapp.cols.v.k)]
+    #  apply(sapp.df.k, c(1:2), function(x){ifelse(is.na(x), 0, x)})  
+    #}
+    
   #Copy template file into target directory & rename with individual report name 
-  if((m!=1 && is.na(m.loop.check[m-1] == m-1)) | (m == 1 && !dir.exists(target.dir))){
-    dir.create(target.dir)
-  }
-  
-  target.file.m <- paste( target.dir,
-                          "/",
-                          "SAPP Report_",
-                          district.name.m,
-                          ".pptx", sep="") 
-  if(file.exists(target.file.m)){
-    file.remove(target.file.m)
-    file.copy(template.file, target.file.m)
-  }else{
-    file.copy(template.file, target.file.m)
-  }
+    if((m!=1 && is.na(m.loop.check[m-1] == m-1)) | (m == 1 && !dir.exists(target.dir))){
+      dir.create(target.dir)
+    }
+    
+    target.file.m <- paste( target.dir,
+                            "/",
+                            "SAPP Report_",
+                            district.name.m,
+                            ".pptx", sep="") 
+    if(file.exists(target.file.m)){
+      file.remove(target.file.m)
+      file.copy(template.file, target.file.m)
+    }else{
+      file.copy(template.file, target.file.m)
+    }
      
   # Powerpoint Formatting Setup
   {
@@ -738,7 +745,7 @@ for(m in 1:length(reporting.districts)){ # START OF LOOP BY DISTRICT
     
     sapp.name.n <- sapp.profile.names.v[n] #abbreviated name of profile for loop
     
-    sapp.cols.v.n <- grep(sapp.name.n, names(sapp.df)) #index vector for columns with abbrevated name of profile in this loop
+    sapp.cols.v.n <- grep(sapp.name.n, names(sapp.df.m)) #index vector for columns with abbrevated name of profile in this loop
     
     if(sapp.df.m$sapp %in% sapp.name.n %>% any %>% !.){noviz.slide <- TRUE}else{} #Skip calculations if no data for this profile
     
