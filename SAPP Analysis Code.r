@@ -505,7 +505,7 @@ library(chron)
             geom_text(
               aes(                                                         
                 y = min(slide.data.df$n)/2+2, 
-                label = paste(slide.data.df$n, "%", sep = "")
+                label = slide.data.df$n
               ), 
               size = 4,
               color = "white") + 
@@ -716,15 +716,14 @@ library(chron)
           
         if(sapp.df.m$sapp %in% sapp.name.n %>% any){
           
-          ordinal.cols.v.n <- intersect(ordinal.cols.v, sapp.cols.v.n)
           binary.cols.v.n <- intersect(binary.cols.v, sapp.cols.v.n)
+          if(length(binary.cols.v.n) < 1){noviz.slide <- TRUE}else{}
           
           #Subsets data frame into rows where there is at least one non-NA response
-          #! something going wrong here
           proficiency.df.n <- sapp.df.m[
-            sapp.df.m[,sapp.cols.v.n] %>%                        #condition for selecting rows based on where there is at least one non-NA response to this profile
+            sapp.df.m[,binary.cols.v.n] %>%                        #condition for selecting rows based on where there is at least one non-NA response to this profile
               apply(., 1, function(x) any(!is.na(x))), 
-            grep(paste("user_id","created_datetime","duplicated_timedif",sapp.name.n, sep = "|"), names(sapp.df.m)) #condition for subsetting columns
+            grep(paste("user_id","created_datetime",sapp.name.n, sep = "|"), names(sapp.df.m)) #condition for subsetting columns
             ] %>% 
             left_join(., users.df %>% select(user_id, school), by = "user_id") %>% #rejoin subsetted data frame with school variable
             group_by(user_id) %>% slice(which.max(created_datetime)) %>% #select most recent response from each user
@@ -734,10 +733,9 @@ library(chron)
           proficiency.df.n$proficiency <- proficiency.df.n[,names(proficiency.df.n) %in% names(sapp.df.m)[binary.cols.v.n]] %>% 
             apply(., 2, function(x) {x > 0}) %>% 
             as.data.frame %>%  
-            apply(., 1, sum) %>% 
+            apply(., 1, function(x) {sum(x, na.rm = TRUE)}) %>% 
             divide_by(0.01*length(binary.cols.v.n)) %>%
             sapply(., function(x) {ifelse(x >= 70, 100, 0)})
-          #}
           
           #Create data frame of mean proficiency of most recent answer from each user in district
           slide.data.df <- group_by(proficiency.df.n, school) %>% 
@@ -745,11 +743,7 @@ library(chron)
             as.data.frame
         }else{}
         
-        
-        
-        #######################
-        
-        
+    
         # PPT SLIDE CREATION
         pptx.m <- addSlide( pptx.m, slide.layout = 'S2')
         
