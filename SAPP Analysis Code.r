@@ -261,7 +261,6 @@ library(chron)
   reporting.districts <- setdiff(users.df$district %>% unique, c(NA, "Test District"))[order(setdiff(users.df$district %>% unique, c(NA, "Test District")))]
   
   #Calculations for proficiency slides, state averages
-  
   proficiency.df.state <- data.frame(sapp = sapp.profile.names.v, avg.proficiency = "")
   proficiency.df.state$avg.proficiency <- proficiency.df.state$avg.proficiency %>% as.character %>% as.numeric
   
@@ -338,10 +337,10 @@ library(chron)
   maxrow <- length(reporting.districts)
   m.loop.check <- vector() #Helps avoid error that template file is only copied if m==1 and sometimes want it to be when testing loop and m != 5
   
-  m <- 2 # for testing loop
+  #m <- 2 # for testing loop
   #for(m in 1:10){  # for testing loop
   
-  #for(m in 1:length(reporting.districts)){ # START OF LOOP BY DISTRICT
+  for(m in 1:length(reporting.districts)){ # START OF LOOP BY DISTRICT
     
     setTxtProgressBar(progress.bar.m, 100*m/maxrow)      
     m.loop.check[m] <- m
@@ -592,9 +591,10 @@ library(chron)
     if(dim(slide.data.df)[1] > 0){
       tot.slide.data.df <- aggregate(slide.data.df$n, by = list(slide.data.df$school), FUN = sum)
       names(tot.slide.data.df) <- c("Group","n")
+      responses.by.sapp <-  aggregate(n~sapp, data = slide.data.df, sum)
     }else{}
     
-    responses.by.sapp <-  aggregate(n~sapp, data = slide.data.df, sum)  
+      
     
     # PPT SLIDE CREATION
     pptx.m <- addSlide( pptx.m, slide.layout = 'S2')
@@ -612,7 +612,6 @@ library(chron)
     
     #Viz
     if(dim(slide.data.df)[1] > 0){
-      print(dim(slide.data.df)[1] > 0)
       slide.graph <- ggplot(
         data = slide.data.df, aes(x = school, y = n, group = sapp, color = sapp)) + 
         
@@ -717,30 +716,33 @@ library(chron)
         if(sapp.df.m$sapp %in% sapp.name.n %>% any){
           
           binary.cols.v.n <- intersect(binary.cols.v, sapp.cols.v.n)
-          if(length(binary.cols.v.n) < 1){noviz.slide <- TRUE}else{}
           
-          #Subsets data frame into rows where there is at least one non-NA response
-          proficiency.df.n <- sapp.df.m[
-            sapp.df.m[,binary.cols.v.n] %>%                        #condition for selecting rows based on where there is at least one non-NA response to this profile
-              apply(., 1, function(x) any(!is.na(x))), 
-            grep(paste("user_id","created_datetime",sapp.name.n, sep = "|"), names(sapp.df.m)) #condition for subsetting columns
-            ] %>% 
-            left_join(., users.df %>% select(user_id, school), by = "user_id") %>% #rejoin subsetted data frame with school variable
-            group_by(user_id) %>% slice(which.max(created_datetime)) %>% #select most recent response from each user
-            as.data.frame
-        
-          #Binary columns (only when have no ordinal columns), response is 'proficient' when 70% or more of column answers are 1  
-          proficiency.df.n$proficiency <- proficiency.df.n[,names(proficiency.df.n) %in% names(sapp.df.m)[binary.cols.v.n]] %>% 
-            apply(., 2, function(x) {x > 0}) %>% 
-            as.data.frame %>%  
-            apply(., 1, function(x) {sum(x, na.rm = TRUE)}) %>% 
-            divide_by(0.01*length(binary.cols.v.n)) %>%
-            sapply(., function(x) {ifelse(x >= 70, 100, 0)})
+          if(length(binary.cols.v.n) < 1){noviz.slide <- TRUE}else{
           
-          #Create data frame of mean proficiency of most recent answer from each user in district
-          slide.data.df <- group_by(proficiency.df.n, school) %>% 
-            summarize(avg.proficiency = mean(proficiency)) %>% 
-            as.data.frame
+            #Subsets data frame into rows where there is at least one non-NA response
+            proficiency.df.n <- sapp.df.m[
+              sapp.df.m[,binary.cols.v.n] %>%                        #condition for selecting rows based on where there is at least one non-NA response to this profile
+                apply(., 1, function(x) any(!is.na(x))), 
+              grep(paste("user_id","created_datetime",sapp.name.n, sep = "|"), names(sapp.df.m)) #condition for subsetting columns
+              ] %>% 
+              left_join(., users.df %>% select(user_id, school), by = "user_id") %>% #rejoin subsetted data frame with school variable
+              group_by(user_id) %>% slice(which.max(created_datetime)) %>% #select most recent response from each user
+              as.data.frame
+          
+            #Binary columns (only when have no ordinal columns), response is 'proficient' when 70% or more of column answers are 1  
+            proficiency.df.n$proficiency <- proficiency.df.n[,names(proficiency.df.n) %in% names(sapp.df.m)[binary.cols.v.n]] %>% 
+              apply(., 2, function(x) {x > 0}) %>% 
+              as.data.frame %>%  
+              apply(., ifelse(dim(.)[2]==1, 2, 1), function(x) {sum(x, na.rm = TRUE)}) %>% 
+              divide_by(0.01*length(binary.cols.v.n)) %>%
+              sapply(., function(x) {ifelse(x >= 70, 100, 0)})
+            
+            #Create data frame of mean proficiency of most recent answer from each user in district
+            slide.data.df <- group_by(proficiency.df.n, school) %>% 
+              summarize(avg.proficiency = mean(proficiency)) %>% 
+              as.data.frame
+          }
+          
         }else{}
         
     
