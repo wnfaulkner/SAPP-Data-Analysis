@@ -337,10 +337,10 @@ library(chron)
   maxrow <- length(reporting.districts)
   m.loop.check <- vector() #Helps avoid error that template file is only copied if m==1 and sometimes want it to be when testing loop and m != 5
   
-  #m <- 2 # for testing loop
+  m <- 2 # for testing loop
   #for(m in 1:10){  # for testing loop
   
-  for(m in 1:length(reporting.districts)){ # START OF LOOP BY DISTRICT
+  #for(m in 1:length(reporting.districts)){ # START OF LOOP BY DISTRICT
     
     setTxtProgressBar(progress.bar.m, 100*m/maxrow)      
     m.loop.check[m] <- m
@@ -623,14 +623,6 @@ library(chron)
           size = 0.9
         ) +
         
-        #Horizontal line for state average
-        geom_hline(
-          yintercept =  tot.slide.data.df %>% .[,2] %>% mean, #mean responses per school
-          linetype = "dashed",
-          color = graphlabelsgrey,
-          size = 0.9
-        ) +
-        
         #Bar chart itself
         geom_bar(
           aes(fill = slide.data.df$sapp), 
@@ -788,6 +780,15 @@ library(chron)
               show.legend = TRUE
             ) +
             
+            #Horizontal line for state average
+            geom_hline(
+              yintercept = proficiency.df.state$avg.proficiency[proficiency.df.state$sapp == sapp.name.n],
+              linetype = "dashed",
+              color = "#a2a5a4",
+              size = 1,
+              show.legend = TRUE
+            ) +
+            
             #Adjust Y axis limits
             coord_cartesian(ylim=c(0,100)) +
             
@@ -825,7 +826,7 @@ library(chron)
                   axis.ticks = element_blank()
             )
           
-          slide.graph
+          #slide.graph
           
           pptx.m <- addPlot(pptx.m,
                             fun = print,
@@ -859,6 +860,32 @@ library(chron)
                                  offy = 2.5,
                                  par.properties = parProperties(text.align ="left", padding = 0)
           )
+          
+          #State average legend
+          slide.legend.3 <- pot("- - - - - - -",
+                                textProperties(color = "#a2a5a4", font.size = 30))
+          
+          pptx.m <- addParagraph(pptx.m,
+                                 slide.legend.3,
+                                 height = 1,
+                                 width = 3,
+                                 offx = 8,
+                                 offy = 3.1,
+                                 par.properties = parProperties(text.align ="left", padding = 0)
+          )
+          
+          slide.legend.4 <- pot("State average",
+                                textProperties(color = graphlabelsgrey, font.size = 12))
+          
+          pptx.m <- addParagraph(pptx.m,
+                                 slide.legend.4,
+                                 height = 1,
+                                 width = 3,
+                                 offx = 8,
+                                 offy = 3.5,
+                                 par.properties = parProperties(text.align ="left", padding = 0)
+          )
+          
         }
         
         #Page number
